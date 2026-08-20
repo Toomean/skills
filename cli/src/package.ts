@@ -11,12 +11,12 @@ import {
 } from "./catalog.ts";
 import { loadManifest } from "./manifest.ts";
 
-export class BuildError extends Error {}
+export class PackageError extends Error {}
 
 async function requireRegular(path: string, label: string): Promise<void> {
   const metadata = await lstat(path);
   if (!metadata.isFile() || metadata.isSymbolicLink() || (await realpath(path)) !== path) {
-    throw new BuildError(`${label} must be a regular non-symlink file: ${path}`);
+    throw new PackageError(`${label} must be a regular non-symlink file: ${path}`);
   }
 }
 
@@ -32,23 +32,22 @@ async function copyRegular(source: string, destination: string, mode: number): P
   return bytes;
 }
 
-async function requireBuildRoots(repositoryRoot: string, compiledCli: string, outputRoot: string): Promise<void> {
-  if (![repositoryRoot, compiledCli, outputRoot].every(isAbsolute)) {
-    throw new BuildError("repository, compiled CLI, and output paths must be absolute");
+async function requirePackageRoots(repositoryRoot: string, bundledCli: string, outputRoot: string): Promise<void> {
+  if (![repositoryRoot, bundledCli, outputRoot].every(isAbsolute)) {
+    throw new PackageError("repository, bundled CLI, and output paths must be absolute");
   }
   const repositoryMetadata = await lstat(repositoryRoot);
   if (!repositoryMetadata.isDirectory() || repositoryMetadata.isSymbolicLink()) {
-    throw new BuildError(`repository root must be a real directory: ${repositoryRoot}`);
+    throw new PackageError(`repository root must be a real directory: ${repositoryRoot}`);
   }
   if ((await realpath(repositoryRoot)) !== repositoryRoot) {
-    throw new BuildError(`repository root must be canonical: ${repositoryRoot}`);
+    throw new PackageError(`repository root must be canonical: ${repositoryRoot}`);
   }
-  await requireRegular(compiledCli, "compiled CLI");
-  await requireRegular(join(dirname(compiledCli), "catalog.js"), "compiled CLI dependency");
+  await requireRegular(bundledCli, "bundled CLI");
   const parent = dirname(outputRoot);
   const parentMetadata = await lstat(parent);
   if (!parentMetadata.isDirectory() || parentMetadata.isSymbolicLink() || (await realpath(parent)) !== parent) {
-    throw new BuildError(`output parent must be a canonical real directory: ${parent}`);
+    throw new PackageError(`output parent must be a canonical real directory: ${parent}`);
   }
   try {
     await lstat(outputRoot);
@@ -56,22 +55,21 @@ async function requireBuildRoots(repositoryRoot: string, compiledCli: string, ou
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
     throw error;
   }
-  throw new BuildError(`output must be absent: ${outputRoot}`);
+  throw new PackageError(`output must be absent: ${outputRoot}`);
 }
 
-export async function buildPackage(
+export async function assemblePackage(
   repositoryRoot: string,
-  compiledCli: string,
+  bundledCli: string,
   outputRoot: string,
 ): Promise<Catalog> {
-  await requireBuildRoots(repositoryRoot, compiledCli, outputRoot);
+  await requirePackageRoots(repositoryRoot, bundledCli, outputRoot);
   const manifest = await loadManifest(join(repositoryRoot, "skills.toml"));
   await mkdir(outputRoot, { mode: 0o755 });
 
   await copyRegular(join(repositoryRoot, "LICENSE"), join(outputRoot, "LICENSE"), 0o644);
   await copyRegular(join(repositoryRoot, "README.md"), join(outputRoot, "README.md"), 0o644);
-  await copyRegular(compiledCli, join(outputRoot, "bin", `${manifest.package.binary}.js`), 0o755);
-  await copyRegular(join(dirname(compiledCli), "catalog.js"), join(outputRoot, "bin", "catalog.js"), 0o644);
+  await copyRegular(bundledCli, join(outputRoot, "bin", `${manifest.package.binary}.js`), 0o755);
 
   const catalogSkills = [];
   for (const skill of manifest.skills.values()) {
@@ -128,9 +126,11 @@ export async function buildPackage(
 
 async function main(argv: readonly string[]): Promise<void> {
   if (argv.length !== 3) {
-    throw new BuildError("usage: build.js <absolute-repository-root> <absolute-compiled-cli> <absolute-output-root>");
+    throw new PackageError(
+      "usage: package.js <absolute-repository-root> <absolute-bundled-cli> <absolute-output-root>",
+    );
   }
-  await buildPackage(argv[0]!, argv[1]!, argv[2]!);
+  await assemblePackage(argv[0]!, argv[1]!, argv[2]!);
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {

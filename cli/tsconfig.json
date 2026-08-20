@@ -9,10 +9,11 @@
     "noUncheckedIndexedAccess": true,
     "rewriteRelativeImportExtensions": true,
     "rootDir": ".",
+    "skipLibCheck": true,
     "strict": true,
     "target": "ES2024",
     "types": ["node"],
     "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "tsdown.config.ts"]
 }

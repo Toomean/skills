@@ -84,7 +84,6 @@ function expectedPackageInventory(packageRoot) {
   const expected = new Set([
     "LICENSE",
     "README.md",
-    "bin/catalog.js",
     "bin/toomean-skills.js",
     "catalog.json",
     "catalog.sha256",
@@ -97,21 +96,37 @@ function expectedPackageInventory(packageRoot) {
 }
 
 function prepare(scratch) {
-  const compiled = join(scratch, "compiled");
+  const bundleRoot = join(scratch, "bundle");
+  const compiledTests = join(scratch, "compiled-tests");
   const packageRoot = join(scratch, "package");
   mkdirSync(join(scratch, "archive"));
   symlinkSync(join(cliRoot, "node_modules"), join(scratch, "node_modules"), "dir");
 
-  run("pnpm", ["exec", "tsc", "--outDir", compiled], { cwd: cliRoot });
-  const compiledCli = join(compiled, "src", "cli.js");
+  run("pnpm", ["exec", "tsc", "--noEmit"], { cwd: cliRoot });
+  run("pnpm", ["exec", "tsc", "--outDir", compiledTests], { cwd: cliRoot });
+  run("pnpm", ["exec", "tsdown", "--config", join(cliRoot, "tsdown.config.ts"), "--out-dir", bundleRoot], {
+    cwd: cliRoot,
+  });
+  const bundledCli = join(bundleRoot, "toomean-skills.js");
+  const bundleInventory = inventory(bundleRoot);
+  if (bundleInventory.length !== 1 || bundleInventory[0]?.path !== "toomean-skills.js") {
+    fail("tsdown output must contain exactly one CLI bundle");
+  }
+  if (!readFileSync(bundledCli, "utf8").startsWith("#!/usr/bin/env node\n")) {
+    fail("tsdown CLI bundle lost its Node shebang");
+  }
   run(
     "node",
-    ["--test", join(compiled, "test", "cli.test.js"), join(compiled, "test", "package.test.js")],
+    [
+      "--test",
+      join(compiledTests, "test", "cli.test.js"),
+      join(compiledTests, "test", "package.test.js"),
+    ],
     {
-      env: { ...process.env, SKILLS_COMPILED_CLI: compiledCli, SKILLS_REPO_ROOT: repositoryRoot },
+      env: { ...process.env, SKILLS_BUNDLED_CLI: bundledCli, SKILLS_REPO_ROOT: repositoryRoot },
     },
   );
-  run("node", [join(compiled, "src", "build.js"), repositoryRoot, compiledCli, packageRoot]);
+  run("node", [join(compiledTests, "src", "package.js"), repositoryRoot, bundledCli, packageRoot]);
 
   const actual = inventory(packageRoot);
   const expectedPaths = expectedPackageInventory(packageRoot);
@@ -128,7 +143,6 @@ function prepare(scratch) {
   for (const path of [
     join(cliRoot, "src", "catalog.ts"),
     join(cliRoot, "src", "cli.ts"),
-    join(packageRoot, "bin", "catalog.js"),
     join(packageRoot, "bin", "toomean-skills.js"),
   ]) {
     if (networkTokens.test(readFileSync(path, "utf8"))) fail(`network-capable token in CLI: ${path}`);

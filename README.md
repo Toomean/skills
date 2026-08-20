@@ -121,19 +121,24 @@ Real CLI installation, project initialization, updates, uninstall, receipts, loc
 all provider-root writes are deliberately unavailable. Omitting `--dry-run` fails with a usage
 error before any target change.
 
-The package source requires Node.js 24+ and pnpm for maintainer checks:
+The maintainer build requires Node.js 24.11+ (the floor of the pinned `tsdown`) and pnpm. The
+generated CLI itself targets the manifest's Node.js 24+ runtime contract:
 
 ```sh
 make setup-cli
 make check-package
 ```
 
-The package gate type-checks and compiles the TypeScript, runs the focused tests, executes the
-generated CLI entrypoint, derives a
-hash-bearing catalog from `skills.toml`, and checks both a package-manager dry-run and a separately
+The package gate type-checks the source, uses `tsdown` to produce one Node CLI bundle, runs the
+focused tests, executes the generated entrypoint, derives a hash-bearing catalog from `skills.toml`,
+checks the staged package with `publint`, and checks both a package-manager dry-run and a separately
 produced archive. The generated tarball contains compiled JavaScript plus runtime skill files — no
 Python, maintainer tests, private state, npm lifecycle scripts, or provider launcher wrappers. The
 package has not been published; npm's own `npm pack` remains a release gate on a runner that has npm.
+
+`cli/tsdown.config.ts` owns TypeScript bundling. `cli/src/package.ts` does not compile modules: it
+stages the single bundle and the manifest-declared skill payload, while `cli/src/catalog.ts` records
+and verifies the payload's paths, modes, sizes, and hashes.
 
 ## Use
 
@@ -187,7 +192,8 @@ high-risk credential patterns. Ordinary `install` and `verify` run this portable
 not execute the optional functional matrices.
 
 `make check-functional` runs the Git-guardrail matrix. `make check-package` runs the TypeScript,
-catalog, dry-run CLI, and package/archive gates after `make setup-cli`. The full release gate,
+`tsdown`, `publint`, catalog, dry-run CLI, and package/archive gates after `make setup-cli`. The full
+release gate,
 `make check`, depends on all three. The functional gate currently requires GNU/Linux with Git,
 Bash, GNU make, and the GNU userland used by its shell controls. On other platforms, users can still
 run the structural check and use the Git fallback; release validation runs the complete gate in a

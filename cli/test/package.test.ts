@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { parse } from "smol-toml";
 
-import { BuildError, buildPackage } from "../src/build.ts";
+import { PackageError, assemblePackage } from "../src/package.ts";
 import { IntegrityError, canonicalJson, loadCatalog, sha256, verifyPayload } from "../src/catalog.ts";
 import { ManifestError, parseManifestForTest } from "../src/manifest.ts";
 
@@ -17,7 +17,7 @@ function requiredEnvironment(name: string): string {
 }
 
 const repositoryRoot = requiredEnvironment("SKILLS_REPO_ROOT");
-const compiledCli = requiredEnvironment("SKILLS_COMPILED_CLI");
+const bundledCli = requiredEnvironment("SKILLS_BUNDLED_CLI");
 
 async function files(root: string): Promise<readonly string[]> {
   const result: string[] = [];
@@ -48,10 +48,10 @@ test("manifest v2 rejects v1 and missing runtime closure", async () => {
   );
 });
 
-test("builder emits a canonical zero-Python package and refuses an existing output", async () => {
+test("assembler emits a canonical zero-Python package and refuses an existing output", async () => {
   const root = await mkdtemp(join(tmpdir(), "toomean-skills-package-test-"));
   const output = join(root, "package");
-  const catalog = await buildPackage(repositoryRoot, compiledCli, output);
+  const catalog = await assemblePackage(repositoryRoot, bundledCli, output);
   assert.equal(catalog.skills.length, 1);
   assert.equal(catalog.skills[0]!.files.length, 12);
   await verifyPayload(output, (await loadCatalog(output)).skills);
@@ -65,15 +65,15 @@ test("builder emits a canonical zero-Python package and refuses an existing outp
   assert.deepEqual(packageJson.bin, { "toomean-skills": "./bin/toomean-skills.js" });
 
   await assert.rejects(
-    buildPackage(repositoryRoot, compiledCli, output),
-    (error: unknown) => error instanceof BuildError && error.message.includes("output must be absent"),
+    assemblePackage(repositoryRoot, bundledCli, output),
+    (error: unknown) => error instanceof PackageError && error.message.includes("output must be absent"),
   );
 });
 
 test("payload byte and mode mutations fail integrity", async () => {
   const root = await mkdtemp(join(tmpdir(), "toomean-skills-payload-test-"));
   const output = join(root, "package");
-  await buildPackage(repositoryRoot, compiledCli, output);
+  await assemblePackage(repositoryRoot, bundledCli, output);
   const catalog = await loadCatalog(output);
   const skillFile = join(output, "skills", "earned-done", "SKILL.md");
   await writeFile(skillFile, `${await readFile(skillFile, "utf8")}mutated\n`);
@@ -83,7 +83,7 @@ test("payload byte and mode mutations fail integrity", async () => {
   );
 
   const secondOutput = join(root, "package-mode");
-  await buildPackage(repositoryRoot, compiledCli, secondOutput);
+  await assemblePackage(repositoryRoot, bundledCli, secondOutput);
   const secondCatalog = await loadCatalog(secondOutput);
   await chmod(join(secondOutput, "skills", "earned-done", "SKILL.md"), 0o755);
   await assert.rejects(
@@ -92,7 +92,7 @@ test("payload byte and mode mutations fail integrity", async () => {
   );
 
   const thirdOutput = join(root, "package-group-mode");
-  await buildPackage(repositoryRoot, compiledCli, thirdOutput);
+  await assemblePackage(repositoryRoot, bundledCli, thirdOutput);
   const thirdCatalog = await loadCatalog(thirdOutput);
   await chmod(join(thirdOutput, "skills", "earned-done", "SKILL.md"), 0o654);
   await assert.rejects(
@@ -101,7 +101,7 @@ test("payload byte and mode mutations fail integrity", async () => {
   );
 
   const fourthOutput = join(root, "package-symlink-root");
-  await buildPackage(repositoryRoot, compiledCli, fourthOutput);
+  await assemblePackage(repositoryRoot, bundledCli, fourthOutput);
   const fourthCatalog = await loadCatalog(fourthOutput);
   const skillRoot = join(fourthOutput, "skills", "earned-done");
   const movedSkillRoot = join(fourthOutput, "skills", "earned-done-real");
@@ -117,7 +117,7 @@ test("catalog traversal mutations fail even with a recomputed sidecar", async ()
   for (const mutation of ["skill-path", "file-path"] as const) {
     const root = await mkdtemp(join(tmpdir(), "toomean-skills-catalog-test-"));
     const output = join(root, "package");
-    await buildPackage(repositoryRoot, compiledCli, output);
+    await assemblePackage(repositoryRoot, bundledCli, output);
     const catalogPath = join(output, "catalog.json");
     const catalog = JSON.parse(await readFile(catalogPath, "utf8")) as {
       skills: { files: { path: string }[]; path: string }[];

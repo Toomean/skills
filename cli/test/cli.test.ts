@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import test from "node:test";
 
-import { buildPackage } from "../src/build.ts";
+import { assemblePackage } from "../src/package.ts";
 import { run } from "../src/cli.ts";
 
 function requiredEnvironment(name: string): string {
@@ -14,7 +14,7 @@ function requiredEnvironment(name: string): string {
 }
 
 const repositoryRoot = requiredEnvironment("SKILLS_REPO_ROOT");
-const compiledCli = requiredEnvironment("SKILLS_COMPILED_CLI");
+const bundledCli = requiredEnvironment("SKILLS_BUNDLED_CLI");
 
 async function snapshot(root: string): Promise<readonly string[]> {
   const result: string[] = [];
@@ -41,7 +41,7 @@ async function snapshot(root: string): Promise<readonly string[]> {
 async function fixture(): Promise<{ readonly packageRoot: string; readonly root: string }> {
   const root = await mkdtemp(join(tmpdir(), "toomean-skills-cli-test-"));
   const packageRoot = join(root, "package");
-  await buildPackage(repositoryRoot, compiledCli, packageRoot);
+  await assemblePackage(repositoryRoot, bundledCli, packageRoot);
   return { packageRoot, root };
 }
 

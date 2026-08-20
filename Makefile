@@ -26,6 +26,7 @@ check-package:
 	    node "$$scratch/package/bin/toomean-skills.js" install all --provider all --dry-run --json \
 	    >"$$scratch/dry-run-smoke.json"; \
 	  node cli/check.mjs smoke "$$scratch"; \
+	  $(PNPM) --dir cli exec publint run "$$scratch/package" --pack=false --strict; \
 	  $(PNPM) --dir "$$scratch/package" pack --dry-run --json --skip-manifest-obfuscation >/dev/null; \
 	  $(PNPM) --dir "$$scratch/package" pack --pack-destination "$$scratch/archive" --skip-manifest-obfuscation >/dev/null; \
 	  node cli/check.mjs verify "$$scratch"
