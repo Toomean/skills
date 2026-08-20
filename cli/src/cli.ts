@@ -1,41 +1,24 @@
 #!/usr/bin/env node
 
+import { lstat, readFile, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { lstat, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import {
-  type Catalog,
-  type CatalogSkill,
-  IntegrityError,
-  canonicalJson,
-  loadCatalog,
-  verifyPayload,
-} from "./catalog.ts";
-
 const PROVIDERS = ["claude", "codex"] as const;
+const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 type Provider = (typeof PROVIDERS)[number];
 
-class CliError extends Error {
-  constructor(readonly exitCode: 1 | 2 | 4, message: string) {
-    super(message);
-  }
+interface Skill {
+  readonly description: string;
+  readonly name: string;
+  readonly version: string;
 }
 
-interface CommonResult {
-  readonly command: string;
-  readonly ok: boolean;
-}
-
-interface ListResult extends CommonResult {
-  readonly command: "list";
-  readonly package: { readonly name: string; readonly version: string };
-  readonly skills: readonly {
-    readonly description: string;
-    readonly name: string;
-    readonly version: string;
-  }[];
+interface PackageMetadata {
+  readonly name: string;
+  readonly toomeanSkills: readonly Skill[];
+  readonly version: string;
 }
 
 interface InstallPlan {
@@ -46,24 +29,33 @@ interface InstallPlan {
   readonly target: string;
 }
 
-interface InstallResult extends CommonResult {
-  readonly command: "install";
-  readonly dryRun: true;
-  readonly plans: readonly InstallPlan[];
+class CliError extends Error {
+  readonly exitCode: 1 | 2 | 4;
+
+  constructor(exitCode: 1 | 2 | 4, message: string) {
+    super(message);
+    this.exitCode = exitCode;
+  }
 }
 
 function usage(): string {
   return [
     "usage:",
     "  toomean-skills list [<skill>|all] [--json]",
-    "  toomean-skills install <skill>|all --provider claude|codex|all [--scope user] --dry-run [--json]",
+    "  toomean-skills install <skill>|all --provider claude|codex|all --dry-run [--json]",
   ].join("\n");
 }
 
-function parseOptions(argv: readonly string[]): { readonly flags: Map<string, string | true>; readonly positional: string[] } {
+function json(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+function parseOptions(argv: readonly string[]): {
+  readonly flags: Map<string, string | true>;
+  readonly positional: string[];
+} {
   const flags = new Map<string, string | true>();
   const positional: string[] = [];
-  const valueFlags = new Set(["--provider", "--scope"]);
   for (let index = 0; index < argv.length; index += 1) {
     const item = argv[index]!;
     if (!item.startsWith("--")) {
@@ -71,7 +63,7 @@ function parseOptions(argv: readonly string[]): { readonly flags: Map<string, st
       continue;
     }
     if (flags.has(item)) throw new CliError(2, `duplicate option: ${item}`);
-    if (valueFlags.has(item)) {
+    if (item === "--provider") {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith("--")) throw new CliError(2, `missing value: ${item}`);
       flags.set(item, value);
@@ -85,24 +77,55 @@ function parseOptions(argv: readonly string[]): { readonly flags: Map<string, st
   return { flags, positional };
 }
 
-function selectedSkills(catalog: Catalog, selector: string): readonly CatalogSkill[] {
-  if (selector === "all") return catalog.skills;
-  const skill = catalog.skills.find((candidate) => candidate.name === selector);
+function isSkill(value: unknown): value is Skill {
+  if (value === null || typeof value !== "object") return false;
+  const candidate = value as Partial<Skill>;
+  return (
+    typeof candidate.name === "string" &&
+    SKILL_NAME.test(candidate.name) &&
+    [candidate.version, candidate.description].every((field) => typeof field === "string" && field.length > 0)
+  );
+}
+
+async function loadPackage(packageRoot: string): Promise<PackageMetadata> {
+  const raw = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as Partial<PackageMetadata>;
+  if (
+    typeof raw.name !== "string" ||
+    typeof raw.version !== "string" ||
+    !Array.isArray(raw.toomeanSkills) ||
+    raw.toomeanSkills.length === 0 ||
+    !raw.toomeanSkills.every(isSkill)
+  ) {
+    throw new CliError(4, "invalid package skill metadata");
+  }
+  return raw as PackageMetadata;
+}
+
+function selectedSkills(skills: readonly Skill[], selector: string): readonly Skill[] {
+  if (selector === "all") return skills;
+  const skill = skills.find((candidate) => candidate.name === selector);
   if (skill === undefined) throw new CliError(2, `unknown skill: ${selector}`);
   return [skill];
 }
 
 function selectedProviders(selector: string): readonly Provider[] {
   if (selector === "all") return PROVIDERS;
-  if (selector !== "claude" && selector !== "codex") {
-    throw new CliError(2, `unknown provider: ${selector}`);
-  }
+  if (selector !== "claude" && selector !== "codex") throw new CliError(2, `unknown provider: ${selector}`);
   return [selector];
 }
 
-function pathContains(parent: string, child: string): boolean {
-  const delta = relative(parent, child);
-  return delta === "" || (!delta.startsWith(`..${sep}`) && delta !== ".." && !isAbsolute(delta));
+async function requireSkill(packageRoot: string, skill: Skill): Promise<void> {
+  const skillRoot = join(packageRoot, skill.name);
+  const rootMetadata = await lstat(skillRoot);
+  const sourceMetadata = await lstat(join(skillRoot, "SKILL.md"));
+  if (
+    rootMetadata.isSymbolicLink() ||
+    !rootMetadata.isDirectory() ||
+    sourceMetadata.isSymbolicLink() ||
+    !sourceMetadata.isFile()
+  ) {
+    throw new CliError(4, `invalid packaged skill: ${skill.name}`);
+  }
 }
 
 function providerRoot(provider: Provider, environment: NodeJS.ProcessEnv): string {
@@ -115,24 +138,12 @@ function providerRoot(provider: Provider, environment: NodeJS.ProcessEnv): strin
   return value;
 }
 
-async function hasSymlinkComponent(path: string): Promise<boolean> {
-  const root = parse(path).root;
-  let cursor = root;
-  for (const part of path.slice(root.length).split(sep).filter(Boolean)) {
-    cursor = join(cursor, part);
-    try {
-      const metadata = await lstat(cursor);
-      if (metadata.isSymbolicLink()) return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-      throw error;
-    }
-  }
-  return false;
+function pathContains(parent: string, child: string): boolean {
+  const delta = relative(parent, child);
+  return delta === "" || (!delta.startsWith(`..${sep}`) && delta !== ".." && !isAbsolute(delta));
 }
 
 async function targetState(target: string): Promise<"absent" | "foreign"> {
-  if (await hasSymlinkComponent(dirname(target))) return "foreign";
   try {
     await lstat(target);
     return "foreign";
@@ -142,14 +153,14 @@ async function targetState(target: string): Promise<"absent" | "foreign"> {
   }
 }
 
-function listText(result: ListResult): string {
-  return result.skills.map((skill) => `${skill.name}\t${skill.version}\t${skill.description}`).join("\n") + "\n";
+function listText(skills: readonly Skill[]): string {
+  return `${skills.map((skill) => `${skill.name}\t${skill.version}\t${skill.description}`).join("\n")}\n`;
 }
 
-function installText(result: InstallResult): string {
-  return result.plans
+function installText(plans: readonly InstallPlan[]): string {
+  return `${plans
     .map((plan) => `${plan.state === "absent" ? "PLAN" : "REFUSE"}\t[${plan.provider}]\t${plan.skill}\t${plan.target}`)
-    .join("\n") + "\n";
+    .join("\n")}\n`;
 }
 
 export async function run(
@@ -157,45 +168,42 @@ export async function run(
   environment: NodeJS.ProcessEnv,
   packageRoot: string,
 ): Promise<{ readonly exitCode: number; readonly stderr: string; readonly stdout: string }> {
-  let json = argv.includes("--json");
+  let wantsJson = argv.includes("--json");
   try {
     const command = argv[0];
     if (command === undefined || command === "--help" || command === "-h") {
       return { exitCode: 0, stderr: "", stdout: `${usage()}\n` };
     }
     const { flags, positional } = parseOptions(argv.slice(1));
-    json = flags.has("--json");
+    wantsJson = flags.has("--json");
     if (flags.has("--help")) return { exitCode: 0, stderr: "", stdout: `${usage()}\n` };
-    const catalog = await loadCatalog(packageRoot);
+    const metadata = await loadPackage(packageRoot);
 
     if (command === "list") {
-      for (const forbidden of ["--provider", "--scope", "--dry-run"] as const) {
-        if (flags.has(forbidden)) throw new CliError(2, `${forbidden} is not valid for list`);
+      if (flags.has("--provider") || flags.has("--dry-run")) {
+        throw new CliError(2, "list accepts only --json");
       }
       if (positional.length > 1) throw new CliError(2, "list accepts at most one skill selector");
-      const skills = selectedSkills(catalog, positional[0] ?? "all");
-      const result: ListResult = {
+      const skills = selectedSkills(metadata.toomeanSkills, positional[0] ?? "all");
+      const result = {
         command: "list",
         ok: true,
-        package: { name: catalog.packageName, version: catalog.packageVersion },
-        skills: skills.map(({ description, name, version }) => ({ description, name, version })),
+        package: { name: metadata.name, version: metadata.version },
+        skills,
       };
-      return { exitCode: 0, stderr: "", stdout: json ? canonicalJson(result) : listText(result) };
+      return { exitCode: 0, stderr: "", stdout: wantsJson ? json(result) : listText(skills) };
     }
 
     if (command === "install") {
       if (positional.length !== 1) throw new CliError(2, "install requires exactly one skill selector");
-      if (flags.get("--scope") !== undefined && flags.get("--scope") !== "user") {
-        throw new CliError(2, "install supports only --scope user; project scope belongs to init");
-      }
       if (!flags.has("--dry-run")) {
         throw new CliError(2, "filesystem mutation is not implemented; install requires --dry-run");
       }
       const provider = flags.get("--provider");
       if (typeof provider !== "string") throw new CliError(2, "install requires --provider");
-      const skills = selectedSkills(catalog, positional[0]!);
+      const skills = selectedSkills(metadata.toomeanSkills, positional[0]!);
+      await Promise.all(skills.map((skill) => requireSkill(packageRoot, skill)));
       const providers = selectedProviders(provider);
-      await verifyPayload(packageRoot, skills);
       const canonicalPackageRoot = await realpath(packageRoot);
       const plans: InstallPlan[] = [];
       for (const selectedProvider of providers) {
@@ -216,24 +224,21 @@ export async function run(
         }
       }
       const ok = plans.every((plan) => plan.state === "absent");
-      const result: InstallResult = { command: "install", dryRun: true, ok, plans };
-      return { exitCode: ok ? 0 : 1, stderr: "", stdout: json ? canonicalJson(result) : installText(result) };
+      const result = { command: "install", dryRun: true, ok, plans };
+      return { exitCode: ok ? 0 : 1, stderr: "", stdout: wantsJson ? json(result) : installText(plans) };
     }
 
     throw new CliError(2, `unknown or unavailable command: ${command}`);
   } catch (error) {
-    const exitCode = error instanceof CliError ? error.exitCode : error instanceof IntegrityError ? 4 : 4;
+    const exitCode = error instanceof CliError ? error.exitCode : 4;
     const message = error instanceof Error ? error.message : String(error);
-    if (json) {
-      return { exitCode, stderr: "", stdout: canonicalJson({ error: message, exitCode, ok: false }) };
-    }
+    if (wantsJson) return { exitCode, stderr: "", stdout: json({ error: message, exitCode, ok: false }) };
     return { exitCode, stderr: `ERROR ${message}\n`, stdout: "" };
   }
 }
 
 async function main(): Promise<void> {
-  const modulePath = fileURLToPath(import.meta.url);
-  const packageRoot = resolve(dirname(modulePath), "..");
+  const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const result = await run(process.argv.slice(2), process.env, packageRoot);
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);

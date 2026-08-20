@@ -41,13 +41,9 @@ Diagnostics contain policy identifiers, never the submitted command. The wrapper
 helper status 0 and normalizes every other outcome—including a missing interpreter or helper
 crash—to Claude Code's blocking status, 2.
 
-The source repository's `checks/git-guardrails-check.py` pins the allow/block mutations, malformed
-and dependency failures, and selected Bash argv controls in disposable directories; that
-maintainer test is not part of the installed npm payload. The main matrix submits Git literals as
-JSON strings and never executes them. The Bash argv controls execute a fake `git`; only the
-abbreviation control executes real Git, and it does so in a freshly initialized disposable
-repository. Run the focused check directly; repository maintainers may also include it in a broader
-repository verification gate.
+The source repository's focused test exercises ordinary commands, all four blocked families, and
+malformed input. That maintainer test is outside the installed npm payload and
+submits Git literals as JSON strings; it does not execute them.
 
 ## Deliberate false positives and residuals
 

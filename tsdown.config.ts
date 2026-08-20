@@ -1,16 +1,12 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  clean: false,
+  clean: true,
   dts: false,
-  entry: { "toomean-skills": "src/cli.ts" },
+  entry: { "toomean-skills": "cli/src/cli.ts" },
   failOnWarn: true,
-  fixedExtension: false,
   format: "esm",
-  hash: false,
-  minify: false,
+  outDir: "dist",
   platform: "node",
-  report: false,
-  sourcemap: false,
   target: "node24",
 });

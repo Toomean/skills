@@ -1,0 +1,44 @@
+{
+  "name": "@toomean/skills",
+  "version": "0.1.0-alpha.1",
+  "description": "Evidence-first working methods for coding agents.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "toomean-skills": "./dist/toomean-skills.mjs"
+  },
+  "files": [
+    "dist",
+    "earned-done"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.11.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Toomean/skills.git"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "pnpm run typecheck && pnpm run build && pnpm test && node dist/toomean-skills.mjs list --json && publint --strict --pack=false && pnpm pack --dry-run --json",
+    "test": "node --test cli/test/cli.test.ts && bash test/git-guardrails.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "toomeanSkills": [
+    {
+      "name": "earned-done",
+      "version": "0.1.0-alpha.1",
+      "description": "Evidence-first orchestration and review for coding agents, with independent roles, empirical verification, and bounded evolution."
+    }
+  ],
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "publint": "0.3.24",
+    "tsdown": "0.22.14",
+    "typescript": "7.0.2"
+  }
+}
