@@ -30,6 +30,12 @@ question, not the sample framework or naming.
 - "Backward compatibility" without verified external consumers
 - Code preserved "just in case"
 
+**Current-requirement gate:** Before adding a custom manifest, builder, checker, catalog, or
+orchestration layer, name the current user-visible requirement that the standard tool cannot meet.
+A future install, update, scale, or safety requirement is not evidence that its infrastructure
+should exist now. Try the native path under [T9](SKILL.md#instrument-traps); if it produces the
+needed artifact, delete the custom layer and reopen the design only when an observed gap appears.
+
 **Example:**
 ```typescript
 // BAD: Deprecated re-export with no external consumers
