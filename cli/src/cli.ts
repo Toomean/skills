@@ -5,6 +5,8 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, normalize, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// This CLI exposes the packaged skill catalog and produces installation previews while leaving
+// provider directories unchanged.
 const PROVIDERS = ["claude", "codex"] as const;
 const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 type Provider = (typeof PROVIDERS)[number];
@@ -87,6 +89,8 @@ function isSkill(value: unknown): value is Skill {
   );
 }
 
+// The root package metadata is the public skill catalog. Reject malformed declarations before
+// either listing them or using their names to resolve filesystem paths.
 async function loadPackage(packageRoot: string): Promise<PackageMetadata> {
   const raw = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as Partial<PackageMetadata>;
   if (
@@ -128,6 +132,8 @@ async function requireSkill(packageRoot: string, skill: Skill): Promise<void> {
   }
 }
 
+// Provider roots bound where installation targets may be planned. Overrides remain limited to
+// normalized, absolute, non-root paths so a dry-run cannot describe an unsafe target.
 function providerRoot(provider: Provider, environment: NodeJS.ProcessEnv): string {
   const variable = provider === "claude" ? "CLAUDE_SKILLS_DIR" : "CODEX_SKILLS_DIR";
   const fallback = provider === "claude" ? join(homedir(), ".claude", "skills") : join(homedir(), ".agents", "skills");
@@ -143,6 +149,8 @@ function pathContains(parent: string, child: string): boolean {
   return delta === "" || (!delta.startsWith(`..${sep}`) && delta !== ".." && !isAbsolute(delta));
 }
 
+// Without install receipts, every existing target is foreign. The preview never infers ownership
+// from a path or from where a symlink happens to point.
 async function targetState(target: string): Promise<"absent" | "foreign"> {
   try {
     await lstat(target);
@@ -163,6 +171,8 @@ function installText(plans: readonly InstallPlan[]): string {
     .join("\n")}\n`;
 }
 
+// Execute the CLI contract without writing to process streams or the filesystem. Returning a
+// complete result keeps command behavior testable and makes the current zero-write boundary clear.
 export async function run(
   argv: readonly string[],
   environment: NodeJS.ProcessEnv,
@@ -202,6 +212,8 @@ export async function run(
       const provider = flags.get("--provider");
       if (typeof provider !== "string") throw new CliError(2, "install requires --provider");
       const skills = selectedSkills(metadata.toomeanSkills, positional[0]!);
+      // Validate the complete source selection before producing any destination plan. A missing or
+      // malformed packaged skill invalidates the whole request rather than yielding a partial plan.
       await Promise.all(skills.map((skill) => requireSkill(packageRoot, skill)));
       const providers = selectedProviders(provider);
       const canonicalPackageRoot = await realpath(packageRoot);
@@ -237,6 +249,7 @@ export async function run(
   }
 }
 
+// Bind the testable command contract to the real process only at the executable boundary.
 async function main(): Promise<void> {
   const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const result = await run(process.argv.slice(2), process.env, packageRoot);
