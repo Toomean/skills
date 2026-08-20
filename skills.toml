@@ -1,10 +1,10 @@
-manifest_version = 1
+manifest_version = 2
 
 [repository]
 name = "skills"
 title = "toomean/skills"
 tagline = "Evidence-first working methods for coding agents."
-# Manifest v1 is UTF-8 text only. Binary assets require a schema/version bump.
+# Manifest v2 is UTF-8 text only. Binary assets require a schema/version bump.
 content_format = "utf-8-text"
 root_files = [
   ".gitignore",
@@ -12,18 +12,36 @@ root_files = [
   "Makefile",
   "README.md",
   "check-repo.py",
+  "cli/check.mjs",
+  "cli/package.json",
+  "cli/pnpm-lock.yaml",
+  "cli/src/build.ts",
+  "cli/src/catalog.ts",
+  "cli/src/cli.ts",
+  "cli/src/manifest.ts",
+  "cli/test/cli.test.ts",
+  "cli/test/package.test.ts",
+  "cli/tsconfig.json",
   "manage-skills.py",
+  "manifest_contract.py",
   "skills.toml",
 ]
+
+[package]
+name = "@toomean/skills"
+binary = "toomean-skills"
+version = "0.1.0-alpha.1"
+catalog_version = 1
+node = ">=24"
+module_format = "esm"
 
 [skills.earned-done]
 path = "earned-done"
 description = "Evidence-first orchestration and review for coding agents, with independent roles, empirical verification, and bounded evolution."
 load_check = "earned-done (rev <revision>) loaded — provider=<provider>, role=<role>."
+version = "0.1.0-alpha.1"
 executables = [
   "checks/git-guardrails-check.py",
-  "hooks/git-guardrails.sh",
-  "hooks/git_guardrails.py",
 ]
 files = [
   "CodeReview.md",
@@ -35,7 +53,21 @@ files = [
   "checks/git-guardrails-check.py",
   "hooks/git-guardrails.md",
   "hooks/git-guardrails.sh",
-  "hooks/git_guardrails.py",
+  "hooks/git_guardrails.cjs",
+  "references/claude-code.md",
+  "references/codex.md",
+  "references/model-routing.md",
+]
+runtime_files = [
+  "CodeReview.md",
+  "EndOfStepSweep.md",
+  "ReviewTaste.md",
+  "SKILL.md",
+  "capabilities/claude-code.md",
+  "capabilities/codex.md",
+  "hooks/git-guardrails.md",
+  "hooks/git-guardrails.sh",
+  "hooks/git_guardrails.cjs",
   "references/claude-code.md",
   "references/codex.md",
   "references/model-routing.md",

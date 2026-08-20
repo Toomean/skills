@@ -8,12 +8,14 @@ import posixpath
 import re
 import stat
 import sys
-import tomllib
 import urllib.parse
 from pathlib import Path, PurePosixPath
 
+sys.dont_write_bytecode = True
 
-NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+from manifest_contract import ManifestError, load_manifest
+
+
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 REFERENCE_DEFINITION_RE = re.compile(r"(?m)^[ \t]{0,3}\[([^\]]+)\]:[ \t]*(\S.*)$")
 REFERENCE_USAGE_RE = re.compile(r"!?\[([^\]]+)\]\[([^\]]*)\]")
@@ -55,92 +57,8 @@ PRIVATE_NAMES = {
 }
 
 
-class CheckError(RuntimeError):
-    pass
-
-
 def has_exact_standalone_line(text: str, literal: str) -> bool:
     return text.count(literal) == 1 and text.splitlines().count(literal) == 1
-
-
-def normalized_relative(value: object, label: str) -> str:
-    if not isinstance(value, str) or not value or "\\" in value:
-        raise CheckError(f"invalid {label}: {value!r}")
-    path = PurePosixPath(value)
-    if path.is_absolute() or str(path) != value or any(part in {"", ".", ".."} for part in path.parts):
-        raise CheckError(f"invalid {label}: {value!r}")
-    return value
-
-
-def sorted_paths(value: object, label: str) -> list[str]:
-    if not isinstance(value, list):
-        raise CheckError(f"{label} must be an array")
-    paths = [normalized_relative(item, label) for item in value]
-    if paths != sorted(paths) or len(paths) != len(set(paths)):
-        raise CheckError(f"{label} must be sorted and unique")
-    return paths
-
-
-def load_manifest(
-    path: Path,
-) -> tuple[dict[str, object], dict[str, dict[str, object]], set[str], set[str]]:
-    if path.is_symlink() or not path.is_file() or not stat.S_ISREG(path.stat().st_mode):
-        raise CheckError(f"manifest must be a regular non-symlink file: {path}")
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
-        raise CheckError(f"cannot read manifest: {exc}") from exc
-    if set(data) != {"manifest_version", "repository", "skills"} or data["manifest_version"] != 1:
-        raise CheckError("manifest top-level schema drift")
-    repository = data["repository"]
-    if not isinstance(repository, dict) or set(repository) != {
-        "content_format", "name", "root_files", "tagline", "title"
-    }:
-        raise CheckError("repository manifest schema drift")
-    if not all(isinstance(repository.get(key), str) and repository[key] for key in ("name", "title", "tagline")):
-        raise CheckError("invalid repository metadata")
-    if repository["content_format"] != "utf-8-text":
-        raise CheckError("manifest v1 supports only repository.content_format = 'utf-8-text'")
-    root_files = sorted_paths(repository["root_files"], "repository.root_files")
-    if "skills.toml" not in root_files or "LICENSE" not in root_files:
-        raise CheckError("repository.root_files must contain skills.toml and LICENSE")
-
-    raw_skills = data["skills"]
-    if not isinstance(raw_skills, dict) or not raw_skills:
-        raise CheckError("skills must be a non-empty table")
-    skills: dict[str, dict[str, object]] = {}
-    expected = set(root_files)
-    executables: set[str] = set()
-    for name, raw in raw_skills.items():
-        if not isinstance(name, str) or not NAME_RE.fullmatch(name):
-            raise CheckError(f"invalid skill name: {name!r}")
-        if not isinstance(raw, dict) or set(raw) != {
-            "description", "executables", "files", "load_check", "path"
-        }:
-            raise CheckError(f"skill schema drift: {name}")
-        if raw["path"] != name or not isinstance(raw["description"], str) or not raw["description"]:
-            raise CheckError(f"invalid skill metadata: {name}")
-        load_check = raw["load_check"]
-        if (
-            not isinstance(load_check, str)
-            or not load_check
-            or load_check != load_check.strip()
-            or "\n" in load_check
-            or "\r" in load_check
-        ):
-            raise CheckError(f"invalid skill load_check: {name}")
-        files = sorted_paths(raw["files"], f"skills.{name}.files")
-        skill_executables = sorted_paths(raw["executables"], f"skills.{name}.executables")
-        if "SKILL.md" not in files:
-            raise CheckError(f"skill allowlist has no SKILL.md: {name}")
-        if not set(skill_executables) <= set(files):
-            raise CheckError(f"skill executables must be allowlisted files: {name}")
-        skills[name] = {**raw, "executables": skill_executables, "files": files}
-        expected.update(f"{name}/{relative}" for relative in files)
-        executables.update(f"{name}/{relative}" for relative in skill_executables)
-    if len(expected) != len(root_files) + sum(len(skill["files"]) for skill in skills.values()):
-        raise CheckError("manifest paths collide")
-    return repository, skills, expected, executables
 
 
 def private_path_reason(relative: str) -> str | None:
@@ -169,6 +87,13 @@ def inventory(root: Path) -> tuple[set[str], set[str], list[str]]:
         if current_relative == Path("."):
             dirnames[:] = [name for name in dirnames if name != ".git"]
             filenames = [name for name in filenames if name != ".git"]
+        elif current_relative == Path("cli"):
+            # The exact source closure excludes the local package-manager dependency tree. Package
+            # checks separately prove that no dependency tree enters the generated tarball.
+            dependency_tree = current_path / "node_modules"
+            if "node_modules" in dirnames and dependency_tree.is_symlink():
+                errors.append("symlink dependency tree is forbidden: cli/node_modules")
+            dirnames[:] = [name for name in dirnames if name != "node_modules"]
         kept_dirs: list[str] = []
         for name in dirnames:
             path = current_path / name
@@ -562,6 +487,28 @@ def check_load_checks(root: Path, skills: dict[str, dict[str, object]]) -> list[
     return errors
 
 
+def check_runtime_document_edges(
+    root: Path, skills: dict[str, dict[str, object]]
+) -> list[str]:
+    """Keep packaged Markdown self-contained when maintainer-only files are excluded."""
+
+    errors: list[str] = []
+    for name, skill in sorted(skills.items()):
+        skill_root = str(skill["path"])
+        runtime_expected = {
+            f"{skill_root}/{relative}" for relative in skill["runtime_files"]
+        }
+        errors.extend(
+            f"runtime package {name}: {error}"
+            for error in check_markdown_pointers(root, runtime_expected)
+        )
+        errors.extend(
+            f"runtime package {name}: {error}"
+            for error in check_cross_document_links(root, runtime_expected)
+        )
+    return errors
+
+
 def main() -> int:
     script = Path(__file__)
     if script.is_symlink():
@@ -569,10 +516,14 @@ def main() -> int:
         return 1
     root = script.resolve().parent
     try:
-        repository, skills, expected, executables = load_manifest(root / "skills.toml")
-    except CheckError as exc:
+        manifest = load_manifest(root / "skills.toml")
+    except ManifestError as exc:
         print(f"FAIL  {exc}", file=sys.stderr)
         return 1
+    repository = manifest.repository
+    skills = manifest.skills
+    expected = set(manifest.expected_files)
+    executables = set(manifest.executables)
 
     actual, directories, errors = inventory(root)
     missing = sorted(expected - actual)
@@ -590,6 +541,7 @@ def main() -> int:
             errors.extend(check_markdown_pointers(root, expected))
             errors.extend(check_cross_document_links(root, expected))
             errors.extend(check_rule_links(root, skills, expected))
+            errors.extend(check_runtime_document_edges(root, skills))
             errors.extend(check_catalog(root, repository, skills))
             errors.extend(check_load_checks(root, skills))
 

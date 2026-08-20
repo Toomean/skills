@@ -108,6 +108,33 @@ checkout with:
 python3 manage-skills.py uninstall earned-done all
 ```
 
+## Optional TypeScript CLI preview
+
+The repository also contains the first non-mutating scaffold for a future optional
+`@toomean/skills` package. It does not replace the portable skill files or the Git/Python install
+path above. The preview implements only:
+
+- `toomean-skills list [<skill>|all] [--json]`;
+- `toomean-skills install <skill>|all --provider claude|codex|all --dry-run [--json]`.
+
+Real CLI installation, project initialization, updates, uninstall, receipts, locks, recovery, and
+all provider-root writes are deliberately unavailable. Omitting `--dry-run` fails with a usage
+error before any target change.
+
+The package source requires Node.js 24+ and pnpm for maintainer checks:
+
+```sh
+make setup-cli
+make check-package
+```
+
+The package gate type-checks and compiles the TypeScript, runs the focused tests, executes the
+generated CLI entrypoint, derives a
+hash-bearing catalog from `skills.toml`, and checks both a package-manager dry-run and a separately
+produced archive. The generated tarball contains compiled JavaScript plus runtime skill files — no
+Python, maintainer tests, private state, npm lifecycle scripts, or provider launcher wrappers. The
+package has not been published; npm's own `npm pack` remains a release gate on a runner that has npm.
+
 ## Use
 
 Invoke the skill explicitly in either provider. For example, in Claude Code:
@@ -147,10 +174,11 @@ Git-history and PR-specific checks are reported as unavailable when they do not 
 
 ## Repository checks
 
-`skills.toml` is both the public catalog and the shipping allowlist: it declares every root file,
-every file belonging to each skill, which shipped files are executable, and that skill's exact
-load-check literal. “Manifest closure” means the checkout contains exactly that declared set —
-nothing missing and nothing unlisted.
+`skills.toml` is the public catalog and the sole hand-authored shipping authority. Manifest v2
+declares every source file, each skill's smaller package-runtime subset, executable source files,
+package/skill versions, Node contract, and the exact load-check literal. The generated package
+catalog adds content hashes; it is not a second hand-maintained inventory. “Manifest closure” means
+the checkout contains exactly the declared source set — nothing missing and nothing unlisted.
 
 Run `python3 check-repo.py` or `make check-structure` to confirm that closure and validate
 executable-bit semantics, unsafe world-write/special permissions, skill metadata, the README
@@ -158,12 +186,13 @@ catalog, load-check equivalence, relative Markdown pointers, private-state exclu
 high-risk credential patterns. Ordinary `install` and `verify` run this portable structural layer automatically; they do
 not execute the optional functional matrices.
 
-`make check-functional` runs the Git-guardrail matrix. The full
-release gate, `make check`, depends on both `check-structure` and `check-functional`. The functional
-gate currently requires GNU/Linux with Git, Bash, GNU make, and the GNU userland used by its shell
-controls. On other platforms, users can still run the structural check and install the skills;
-release validation runs the complete gate in a supported environment. Git does not preserve
-complete POSIX modes, so ordinary group-write created by the checkout umask is accepted.
+`make check-functional` runs the Git-guardrail matrix. `make check-package` runs the TypeScript,
+catalog, dry-run CLI, and package/archive gates after `make setup-cli`. The full release gate,
+`make check`, depends on all three. The functional gate currently requires GNU/Linux with Git,
+Bash, GNU make, and the GNU userland used by its shell controls. On other platforms, users can still
+run the structural check and use the Git fallback; release validation runs the complete gate in a
+supported environment. Git does not preserve complete POSIX modes, so ordinary group-write created
+by the checkout umask is accepted.
 
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 In each satellite, the first meaningful occurrence of every rule ID owned elsewhere links to its

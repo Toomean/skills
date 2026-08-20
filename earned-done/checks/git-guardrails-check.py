@@ -114,7 +114,7 @@ def run_hook(
     input_bytes: bytes, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
-        [str(HOOK)],
+        ["/bin/bash", str(HOOK)],
         input=input_bytes,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -155,14 +155,14 @@ def wrapper_controls() -> tuple[list[str], int]:
         check=False,
     )
     if result.returncode != 2:
-        failures.append(f"missing python: expected 2, got {result.returncode}")
+        failures.append(f"missing node: expected 2, got {result.returncode}")
     with tempfile.TemporaryDirectory(prefix="git-guardrail-crash-") as directory:
         count += 1
         wrapper = Path(directory) / HOOK.name
         shutil.copy2(HOOK, wrapper)
-        (Path(directory) / "git_guardrails.py").write_text("raise SystemExit(17)\n")
+        (Path(directory) / "git_guardrails.cjs").write_text("process.exit(17);\n")
         result = subprocess.run(
-            [str(wrapper)],
+            ["/bin/bash", str(wrapper)],
             input=payload("git status"),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

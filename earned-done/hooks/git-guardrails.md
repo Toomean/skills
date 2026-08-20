@@ -32,16 +32,18 @@ whitespace. The helper does not unquote, expand, execute, or build a shell AST.
 
 ## Entrypoint and checks
 
-`git-guardrails.sh` is the stable entrypoint. It requires `bash` and `python3`; the adjacent
-`git_guardrails.py` helper uses only `json`, `re`, and `sys` from the standard library. The helper
+`git-guardrails.sh` is the stable entrypoint, invoked explicitly through `bash`. It requires Bash
+and Node.js 24+; the adjacent
+`git_guardrails.cjs` helper uses only built-in Node APIs. The helper
 validates a bounded JSON envelope and string command, rejects NUL, and caps the decoded command at
 128 KiB.
 Diagnostics contain policy identifiers, never the submitted command. The wrapper allows only
 helper status 0 and normalizes every other outcome—including a missing interpreter or helper
 crash—to Claude Code's blocking status, 2.
 
-`checks/git-guardrails-check.py` pins the allow/block mutations, malformed and dependency failures,
-and selected Bash argv controls in disposable directories. The main matrix submits Git literals as
+The source repository's `checks/git-guardrails-check.py` pins the allow/block mutations, malformed
+and dependency failures, and selected Bash argv controls in disposable directories; that
+maintainer test is not part of the installed npm payload. The main matrix submits Git literals as
 JSON strings and never executes them. The Bash argv controls execute a fake `git`; only the
 abbreviation control executes real Git, and it does so in a freshly initialized disposable
 repository. Run the focused check directly; repository maintainers may also include it in a broader
@@ -72,7 +74,7 @@ Register the entrypoint under `hooks.PreToolUse` with a `Bash` matcher:
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "/absolute/path/to/git-guardrails.sh" }
+          { "type": "command", "command": "bash /absolute/path/to/git-guardrails.sh" }
         ]
       }
     ]

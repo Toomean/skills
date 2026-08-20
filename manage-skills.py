@@ -4,15 +4,16 @@
 from __future__ import annotations
 
 import os
-import re
 import stat
 import subprocess
 import sys
-import tomllib
-from pathlib import Path, PurePosixPath
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+
+from manifest_contract import ManifestError, load_manifest
 
 
-NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 PROVIDERS = ("claude", "codex")
 ROOT = Path(__file__).resolve().parent
 MANIFEST = ROOT / "skills.toml"
@@ -22,77 +23,13 @@ class ManagerError(RuntimeError):
     pass
 
 
-def normalized_relative(value: object, label: str) -> str:
-    if not isinstance(value, str) or not value or "\\" in value:
-        raise ManagerError(f"invalid {label}: {value!r}")
-    path = PurePosixPath(value)
-    if path.is_absolute() or str(path) != value or any(part in {"", ".", ".."} for part in path.parts):
-        raise ManagerError(f"invalid {label}: {value!r}")
-    return value
-
-
-def sorted_paths(value: object, label: str) -> list[str]:
-    if not isinstance(value, list):
-        raise ManagerError(f"{label} must be an array")
-    paths = [normalized_relative(item, label) for item in value]
-    if paths != sorted(paths) or len(paths) != len(set(paths)):
-        raise ManagerError(f"{label} must be sorted and unique")
-    return paths
-
-
 def load_skills() -> dict[str, Path]:
     """Load the exact manifest schema before trusting any declared source path."""
-    if MANIFEST.is_symlink() or not MANIFEST.is_file():
-        raise ManagerError(f"manifest must be a regular non-symlink file: {MANIFEST}")
     try:
-        data = tomllib.loads(MANIFEST.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
-        raise ManagerError(f"cannot read manifest: {exc}") from exc
-    if set(data) != {"manifest_version", "repository", "skills"} or data["manifest_version"] != 1:
-        raise ManagerError("manifest top-level schema drift")
-    repository = data["repository"]
-    if not isinstance(repository, dict) or set(repository) != {
-        "content_format", "name", "root_files", "tagline", "title"
-    }:
-        raise ManagerError("repository manifest schema drift")
-    if not all(isinstance(repository.get(key), str) and repository[key] for key in ("name", "title", "tagline")):
-        raise ManagerError("invalid repository metadata")
-    if repository["content_format"] != "utf-8-text":
-        raise ManagerError("manifest v1 supports only repository.content_format = 'utf-8-text'")
-    root_files = sorted_paths(repository.get("root_files"), "repository.root_files")
-    if "skills.toml" not in root_files or "LICENSE" not in root_files:
-        raise ManagerError("repository.root_files must contain skills.toml and LICENSE")
-
-    raw_skills = data["skills"]
-    if not isinstance(raw_skills, dict) or not raw_skills:
-        raise ManagerError("skills must be a non-empty table")
-    skills: dict[str, Path] = {}
-    for name, raw in raw_skills.items():
-        if not isinstance(name, str) or not NAME_RE.fullmatch(name):
-            raise ManagerError(f"invalid skill name: {name!r}")
-        if not isinstance(raw, dict) or set(raw) != {
-            "description", "executables", "files", "load_check", "path"
-        }:
-            raise ManagerError(f"skill schema drift: {name}")
-        if raw["path"] != name or not isinstance(raw["description"], str) or not raw["description"]:
-            raise ManagerError(f"invalid skill metadata: {name}")
-        load_check = raw["load_check"]
-        if (
-            not isinstance(load_check, str)
-            or not load_check
-            or load_check != load_check.strip()
-            or "\n" in load_check
-            or "\r" in load_check
-        ):
-            raise ManagerError(f"invalid skill load_check: {name}")
-        files = sorted_paths(raw["files"], f"skills.{name}.files")
-        executables = sorted_paths(raw["executables"], f"skills.{name}.executables")
-        if "SKILL.md" not in files:
-            raise ManagerError(f"skill allowlist has no SKILL.md: {name}")
-        if not set(executables) <= set(files):
-            raise ManagerError(f"skill executables must be allowlisted files: {name}")
-        skills[name] = ROOT / name
-    return skills
+        manifest = load_manifest(MANIFEST)
+    except ManifestError as exc:
+        raise ManagerError(str(exc)) from exc
+    return {name: ROOT / str(skill["path"]) for name, skill in manifest.skills.items()}
 
 
 def selections(selector: str, choices: tuple[str, ...], label: str) -> tuple[str, ...]:
