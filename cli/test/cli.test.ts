@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtempDisposable, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
@@ -21,9 +21,31 @@ test("list reads the packaged skill metadata", async () => {
   assert.deepEqual(parsed.skills.map((skill) => skill.name), ["earned-done"]);
 });
 
+test("accepts standard Node option forms and reports usage errors", async () => {
+  const help = await run(["list", "-h"], {}, packageRoot);
+  assert.equal(help.exitCode, 0);
+  assert.match(help.stdout, /^usage:/);
+
+  await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-cli-options-"));
+  const inline = await run(
+    ["install", "earned-done", "--provider=codex", "--dry-run"],
+    { CODEX_SKILLS_DIR: join(root.path, "codex", "skills") },
+    packageRoot,
+  );
+  assert.equal(inline.exitCode, 0);
+
+  for (const argv of [
+    ["list", "--unknown"],
+    ["install", "earned-done", "--provider"],
+  ]) {
+    const result = await run(argv, {}, packageRoot);
+    assert.equal(result.exitCode, 2);
+  }
+});
+
 test("install dry-run plans both providers without writing", async () => {
-  const root = await mkdtemp(join(tmpdir(), "toomean-skills-cli-test-"));
-  const targets = join(root, "targets");
+  await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-cli-test-"));
+  const targets = join(root.path, "targets");
   const result = await run(
     ["install", "earned-done", "--provider", "all", "--dry-run", "--json"],
     {
@@ -34,16 +56,13 @@ test("install dry-run plans both providers without writing", async () => {
   );
   assert.equal(result.exitCode, 0);
   await assert.rejects(readFile(join(targets, "claude", "skills", "earned-done", "SKILL.md")));
-  const parsed = JSON.parse(result.stdout) as { plans: { action: string; state: string }[] };
-  assert.deepEqual(parsed.plans.map(({ action, state }) => ({ action, state })), [
-    { action: "install", state: "absent" },
-    { action: "install", state: "absent" },
-  ]);
+  const parsed = JSON.parse(result.stdout) as { plans: { state: string }[] };
+  assert.deepEqual(parsed.plans.map(({ state }) => state), ["absent", "absent"]);
 });
 
 test("foreign targets and mutation requests fail without changing the target", async () => {
-  const root = await mkdtemp(join(tmpdir(), "toomean-skills-cli-foreign-"));
-  const providerRoot = join(root, "codex", "skills");
+  await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-cli-foreign-"));
+  const providerRoot = join(root.path, "codex", "skills");
   const target = join(providerRoot, "earned-done");
   await mkdir(target, { recursive: true });
   const marker = join(target, "foreign.txt");

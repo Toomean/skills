@@ -4,11 +4,18 @@ import { lstat, readFile, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, normalize, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 
 // This CLI exposes the packaged skill catalog and produces installation previews while leaving
 // provider directories unchanged.
 const PROVIDERS = ["claude", "codex"] as const;
 const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const OPTIONS = {
+  provider: { type: "string" },
+  json: { type: "boolean" },
+  "dry-run": { type: "boolean" },
+  help: { type: "boolean", short: "h" },
+} as const;
 type Provider = (typeof PROVIDERS)[number];
 
 interface Skill {
@@ -24,7 +31,6 @@ interface PackageMetadata {
 }
 
 interface InstallPlan {
-  readonly action: "install" | "refuse";
   readonly provider: Provider;
   readonly skill: string;
   readonly state: "absent" | "foreign";
@@ -52,31 +58,19 @@ function json(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function parseOptions(argv: readonly string[]): {
-  readonly flags: Map<string, string | true>;
-  readonly positional: string[];
-} {
-  const flags = new Map<string, string | true>();
-  const positional: string[] = [];
-  for (let index = 0; index < argv.length; index += 1) {
-    const item = argv[index]!;
-    if (!item.startsWith("--")) {
-      positional.push(item);
-      continue;
-    }
-    if (flags.has(item)) throw new CliError(2, `duplicate option: ${item}`);
-    if (item === "--provider") {
-      const value = argv[index + 1];
-      if (value === undefined || value.startsWith("--")) throw new CliError(2, `missing value: ${item}`);
-      flags.set(item, value);
-      index += 1;
-    } else if (item === "--json" || item === "--dry-run" || item === "--help") {
-      flags.set(item, true);
-    } else {
-      throw new CliError(2, `unknown option: ${item}`);
-    }
+// Node owns tokenization and option syntax; this adapter only maps native parser failures into the
+// CLI's usage-error contract.
+function parseCliArgs(argv: readonly string[]) {
+  try {
+    return parseArgs({
+      args: [...argv],
+      options: OPTIONS,
+      strict: true,
+      allowPositionals: true,
+    });
+  } catch (error) {
+    throw new CliError(2, error instanceof Error ? error.message : String(error));
   }
-  return { flags, positional };
 }
 
 function isSkill(value: unknown): value is Skill {
@@ -184,17 +178,17 @@ export async function run(
     if (command === undefined || command === "--help" || command === "-h") {
       return { exitCode: 0, stderr: "", stdout: `${usage()}\n` };
     }
-    const { flags, positional } = parseOptions(argv.slice(1));
-    wantsJson = flags.has("--json");
-    if (flags.has("--help")) return { exitCode: 0, stderr: "", stdout: `${usage()}\n` };
+    const { values, positionals } = parseCliArgs(argv.slice(1));
+    wantsJson = values.json === true;
+    if (values.help === true) return { exitCode: 0, stderr: "", stdout: `${usage()}\n` };
     const metadata = await loadPackage(packageRoot);
 
     if (command === "list") {
-      if (flags.has("--provider") || flags.has("--dry-run")) {
+      if (values.provider !== undefined || values["dry-run"] === true) {
         throw new CliError(2, "list accepts only --json");
       }
-      if (positional.length > 1) throw new CliError(2, "list accepts at most one skill selector");
-      const skills = selectedSkills(metadata.toomeanSkills, positional[0] ?? "all");
+      if (positionals.length > 1) throw new CliError(2, "list accepts at most one skill selector");
+      const skills = selectedSkills(metadata.toomeanSkills, positionals[0] ?? "all");
       const result = {
         command: "list",
         ok: true,
@@ -205,13 +199,13 @@ export async function run(
     }
 
     if (command === "install") {
-      if (positional.length !== 1) throw new CliError(2, "install requires exactly one skill selector");
-      if (!flags.has("--dry-run")) {
+      if (positionals.length !== 1) throw new CliError(2, "install requires exactly one skill selector");
+      if (values["dry-run"] !== true) {
         throw new CliError(2, "filesystem mutation is not implemented; install requires --dry-run");
       }
-      const provider = flags.get("--provider");
+      const provider = values.provider;
       if (typeof provider !== "string") throw new CliError(2, "install requires --provider");
-      const skills = selectedSkills(metadata.toomeanSkills, positional[0]!);
+      const skills = selectedSkills(metadata.toomeanSkills, positionals[0]!);
       // Validate the complete source selection before producing any destination plan. A missing or
       // malformed packaged skill invalidates the whole request rather than yielding a partial plan.
       await Promise.all(skills.map((skill) => requireSkill(packageRoot, skill)));
@@ -227,7 +221,6 @@ export async function run(
           const target = join(root, skill.name);
           const state = await targetState(target);
           plans.push({
-            action: state === "absent" ? "install" : "refuse",
             provider: selectedProvider,
             skill: skill.name,
             state,
