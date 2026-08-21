@@ -22,9 +22,9 @@ Before claiming a step done, run these checks:
    Search the whole flow, not only the latest diff. Cumulative steps can kill a producer that no
    single diff makes obviously dead.
 
-Once per change, run a comment pass. Delete narration, duplicates away from the decision site, and
-ticket-number tokens. Verify that no essential contract comment was lost, using a keeper list or
-loss-check lens.
+Once per change, run a [comment-quality pass](ReviewTaste.md#comment-quality). Delete narration,
+duplicates away from the decision site, and ticket-number tokens. Verify that no essential purpose,
+contract, or rationale comment was lost, using a keeper list or loss-check lens.
 
 The sweep produces either "zero hits, ship" or "cleanup before ship". Skipping it creates
 review-visible technical debt.

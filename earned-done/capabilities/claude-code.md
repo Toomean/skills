@@ -1,7 +1,8 @@
 # Claude Code capabilities — planning catalog
 
-Last synced: 2026-08-16 — model configuration, subagents, and Advisor behavior against official Claude Code
-documentation; CLI flags re-verified against installed Claude Code `2.1.233`.
+Last synced: 2026-08-21 — model configuration, subagents, skills, memory, and Advisor behavior
+against official Claude Code documentation; CLI flags re-verified against installed Claude Code
+`2.1.233`.
 
 Read this after selecting the Claude Code adapter. These are planning triggers, not guarantees;
 verify current official documentation before relying on semantics that affect correctness,
