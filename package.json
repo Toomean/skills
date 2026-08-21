@@ -24,7 +24,10 @@
   },
   "scripts": {
     "build": "tsdown",
-    "check": "pnpm run typecheck && pnpm run build && pnpm test && node dist/toomean-skills.mjs list --json && publint --strict --pack=false && pnpm pack --dry-run --json",
+    "check": "pnpm run typecheck && pnpm run build && pnpm test && pnpm run check:smoke && pnpm run check:publint && pnpm run check:pack",
+    "check:pack": "pnpm pack --dry-run --json",
+    "check:publint": "publint --strict --pack=false",
+    "check:smoke": "node dist/toomean-skills.mjs list --json",
     "test": "node --test cli/test/cli.test.ts && bash test/git-guardrails.sh",
     "typecheck": "tsc --noEmit"
   },

@@ -36,11 +36,36 @@ test("accepts standard Node option forms and reports usage errors", async () => 
 
   for (const argv of [
     ["list", "--unknown"],
+    ["list", "--provider", "codex"],
     ["install", "earned-done", "--provider"],
   ]) {
     const result = await run(argv, {}, packageRoot);
     assert.equal(result.exitCode, 2);
   }
+
+  const jsonError = await run(["unknown", "--json"], {}, packageRoot);
+  assert.deepEqual(JSON.parse(jsonError.stdout), {
+    code: "usage",
+    error: "unknown or unavailable command: unknown",
+    exitCode: 2,
+    ok: false,
+  });
+});
+
+test("reports malformed package metadata with a stable text code", async () => {
+  await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-invalid-package-"));
+  await writeFile(
+    join(root.path, "package.json"),
+    JSON.stringify({ name: "@toomean/skills", toomeanSkills: [], version: "0.1.0" }),
+  );
+
+  const result = await run(["list", "--json"], {}, root.path);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    code: "invalid-package",
+    error: "invalid package skill metadata",
+    exitCode: 4,
+    ok: false,
+  });
 });
 
 test("install dry-run plans both providers without writing", async () => {
