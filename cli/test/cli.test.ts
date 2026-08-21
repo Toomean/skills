@@ -1,13 +1,26 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtempDisposable, readFile, realpath, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdir, mkdtempDisposable, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { run } from "../src/cli.ts";
 
 const packageRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), "../.."));
+const execFileAsync = promisify(execFile);
+
+test("prints help when the CLI is invoked through a symlink", async () => {
+  await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-cli-entry-"));
+  const entry = join(root.path, "toomean-skills.ts");
+  await symlink(join(packageRoot, "cli", "src", "cli.ts"), entry, "file");
+
+  const { stderr, stdout } = await execFileAsync(process.execPath, [entry, "--help"], { cwd: packageRoot });
+  assert.equal(stderr, "");
+  assert.match(stdout, /^usage:/);
+});
 
 test("list reads the packaged skill metadata", async () => {
   const text = await run(["list"], {}, packageRoot);
@@ -22,9 +35,18 @@ test("list reads the packaged skill metadata", async () => {
 });
 
 test("accepts standard Node option forms and reports usage errors", async () => {
-  const help = await run(["list", "-h"], {}, packageRoot);
-  assert.equal(help.exitCode, 0);
-  assert.match(help.stdout, /^usage:/);
+  for (const argv of [
+    ["--help"],
+    ["-h"],
+    ["list", "--help"],
+    ["list", "-h"],
+    ["install", "--help"],
+    ["install", "-h"],
+  ]) {
+    const help = await run(argv, {}, packageRoot);
+    assert.equal(help.exitCode, 0);
+    assert.match(help.stdout, /^usage:/);
+  }
 
   await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-cli-options-"));
   const inline = await run(
@@ -50,6 +72,11 @@ test("accepts standard Node option forms and reports usage errors", async () => 
     exitCode: 2,
     ok: false,
   });
+
+  const textError = await run(["list", "--", "--json"], {}, packageRoot);
+  assert.equal(textError.exitCode, 2);
+  assert.equal(textError.stdout, "");
+  assert.match(textError.stderr, /^ERROR usage:/);
 });
 
 test("reports malformed package metadata with a stable text code", async () => {
@@ -58,6 +85,19 @@ test("reports malformed package metadata with a stable text code", async () => {
     join(root.path, "package.json"),
     JSON.stringify({ name: "@toomean/skills", toomeanSkills: [], version: "0.1.0" }),
   );
+
+  const result = await run(["list", "--json"], {}, root.path);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    code: "invalid-package",
+    error: "invalid package skill metadata",
+    exitCode: 4,
+    ok: false,
+  });
+});
+
+test("reports literal-null package metadata with a stable code", async () => {
+  await using root = await mkdtempDisposable(join(tmpdir(), "toomean-skills-cli-null-package-"));
+  await writeFile(join(root.path, "package.json"), "null");
 
   const result = await run(["list", "--json"], {}, root.path);
   assert.deepEqual(JSON.parse(result.stdout), {

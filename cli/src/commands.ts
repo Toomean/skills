@@ -36,23 +36,27 @@ function isSkill(value: unknown): value is Skill {
 }
 
 async function loadPackage(packageRoot: string): Promise<PackageMetadata> {
-  let raw: Partial<PackageMetadata>;
+  let raw: unknown;
   try {
-    raw = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as Partial<PackageMetadata>;
+    raw = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new CliError("invalid-package", `cannot read package skill metadata: ${reason}`);
   }
+  if (raw === null || typeof raw !== "object") {
+    throw new CliError("invalid-package", "invalid package skill metadata");
+  }
+  const metadata = raw as Partial<PackageMetadata>;
   if (
-    typeof raw.name !== "string" ||
-    typeof raw.version !== "string" ||
-    !Array.isArray(raw.toomeanSkills) ||
-    raw.toomeanSkills.length === 0 ||
-    !raw.toomeanSkills.every(isSkill)
+    typeof metadata.name !== "string" ||
+    typeof metadata.version !== "string" ||
+    !Array.isArray(metadata.toomeanSkills) ||
+    metadata.toomeanSkills.length === 0 ||
+    !metadata.toomeanSkills.every(isSkill)
   ) {
     throw new CliError("invalid-package", "invalid package skill metadata");
   }
-  return raw as PackageMetadata;
+  return metadata as PackageMetadata;
 }
 
 function selectedSkills(skills: readonly Skill[], selector: string): readonly Skill[] {
