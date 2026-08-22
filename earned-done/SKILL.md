@@ -5,7 +5,7 @@ description: Evidence-first orchestration and review for coding agents. Use for 
 
 # Earned Done
 
-Protocol revision: 2026-08-17-r028. Rules carry stable IDs (**C#** core rule, **T#** trap,
+Protocol revision: 2026-08-21-r029. Rules carry stable IDs (**C#** core rule, **T#** trap,
 **W#** workflow step); a deleted rule retires its ID forever.
 
 This skill is the portable, project-agnostic protocol — how we work, not facts about any one
@@ -214,7 +214,8 @@ artifact; once it does, the full change-producing sequence applies.
    shares a minimal correctness/evidence baseline and may report any material defect; a named lens
    is its search emphasis, never a boundary on what it may notice.
    - **Reviewer #1: technical correctness** — bug surface, runtime behavior, edge cases. Be paranoid, find errors. Cite file:line.
-   - **Reviewer #2: review intent + cleanup** — does this close the original review concern? Any unrelated scope creep? Comment quality?
+   - **Reviewer #2: review intent + cleanup** — does this close the original review concern? Any
+     unrelated scope creep? [Comment quality](ReviewTaste.md#comment-quality)?
    - **Finite role accounting:** put each required risk lens into one of those two contexts when its
      independence and expertise are compatible with that context. Add a context only when required
      independence or expertise cannot be composed into the two defaults, and name that reason in the
