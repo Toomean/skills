@@ -12,11 +12,12 @@
     "earned-done"
   ],
   "engines": {
-    "node": ">=24"
+    "node": ">=24.18"
   },
   "packageManager": "pnpm@11.11.0",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "next"
   },
   "repository": {
     "type": "git",
@@ -24,20 +25,15 @@
   },
   "scripts": {
     "build": "tsdown",
-    "check": "pnpm run typecheck && pnpm run build && pnpm test && pnpm run check:smoke && pnpm run check:publint && pnpm run check:pack",
+    "check": "pnpm run typecheck && pnpm test && pnpm run check:pack && pnpm run check:smoke && pnpm run check:publint",
     "check:pack": "pnpm pack --dry-run --json",
     "check:publint": "publint --strict --pack=false",
-    "check:smoke": "node dist/toomean-skills.mjs list --json",
+    "check:smoke": "node dist/toomean-skills.mjs list",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm check",
     "test": "node --test cli/test/cli.test.ts && bash test/git-guardrails.sh",
     "typecheck": "tsc --noEmit"
   },
-  "toomeanSkills": [
-    {
-      "name": "earned-done",
-      "version": "0.1.0-alpha.1",
-      "description": "Evidence-first orchestration and review for coding agents, with independent roles, empirical verification, and bounded evolution."
-    }
-  ],
   "devDependencies": {
     "@types/node": "24.13.3",
     "publint": "0.3.24",

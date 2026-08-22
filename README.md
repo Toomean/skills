@@ -49,9 +49,32 @@ ceremony.
 - [`earned-done`](earned-done/SKILL.md) — Evidence-first orchestration and review for coding agents,
   with independent roles, empirical verification, and bounded evolution.
 
-## Install from Git
+## Install with npm
 
-Clone this repository into a durable path. The commands below create direct symlinks into the
+The npm package has not been published yet. The first alpha will use the `next` tag; after it is
+available, inspect or install the bundled skill without keeping a repository checkout:
+
+```sh
+npx @toomean/skills@next list
+npx @toomean/skills@next install earned-done --provider codex
+npx @toomean/skills@next install earned-done --provider claude
+```
+
+Use `--provider all` to install both copies, or add `--dry-run` to perform the same source and
+destination preflight without writing. `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the
+default user roots. Overrides must be absolute, non-root paths that resolve to independent locations
+outside the packaged skill; the operator is responsible for choosing them.
+
+The installer copies the complete packaged `earned-done` directory. It creates missing provider
+roots but never replaces any existing final path, including a file, directory, or broken symlink.
+For `--provider all`, both targets are checked before either provider root is created. There is no
+force, update, or uninstall command. An unexpected copy failure can leave a newly created root, a
+partial target, or an already completed first-provider copy; the CLI reports that possibility and
+never tries to repair it by deleting files.
+
+## Install from Git (fallback)
+
+The no-npm fallback is a durable Git checkout. The commands below create direct symlinks into that
 checkout, so moving or deleting it breaks the installation.
 
 ```sh
@@ -86,35 +109,10 @@ ln -s "$PWD/earned-done" "$claude_target"
 ```
 
 The explicit preflight catches both normal and broken existing links before `ln` can follow a
-directory symlink. Inspect an existing path yourself instead of replacing it blindly.
-`CLAUDE_SKILLS_DIR` and `CODEX_SKILLS_DIR` provide optional destination overrides. These manual
+directory symlink. Inspect an existing path yourself instead of replacing it blindly. These manual
 commands assume one installer at a time; they are not a concurrent transaction protocol.
 
-## Optional CLI preview
-
-The repository contains a small non-mutating preview of a future `@toomean/skills` package:
-
-- `toomean-skills list [<skill>|all] [--json]`;
-- `toomean-skills install <skill>|all --provider claude|codex|all --dry-run [--json]`.
-
-Real CLI installation, project initialization, updates, uninstall, receipts, locks, recovery, and
-provider-root writes are deliberately unavailable. Omitting `--dry-run` fails before any target
-change.
-
-The maintainer build requires Node.js 24.11+ (the floor of the pinned `tsdown`) and pnpm. The
-generated CLI targets Node.js 24+:
-
-```sh
-pnpm install --frozen-lockfile
-pnpm check
-```
-
-The package scripts type-check the source, use `tsdown` to produce one Node CLI bundle, run the
-focused tests and built entrypoint, validate the package with `publint`, and show the exact
-`pnpm pack --dry-run` inventory. `package.json.files` is the npm allowlist: it ships the bundle and
-the `earned-done` folder directly, with no generated manifest, content catalog, or staging builder.
-The package has not been published; npm's own `npm pack` remains a release gate on a runner that has
-npm.
+The CLI requires Node.js 24.18+. Maintainer work also requires pnpm.
 
 ## Use
 
@@ -143,9 +141,18 @@ fill an already-planned read-only reviewer slot when the harness natively expose
 
 ## Repository checks
 
-`package.json` is both the npm metadata and package allowlist. Run `pnpm check` to type-check and
-bundle the CLI, run its Node tests, smoke the built entrypoint, run `publint`, and display the
-package-manager's dry-run inventory. The Git-guardrail smoke requires Bash and Node.js.
+`package.json` is both the npm metadata and package allowlist:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm check
+```
+
+`pnpm check` type-checks and tests the source, runs `pnpm pack --dry-run` (whose `prepack` builds the
+single CLI bundle), smoke-tests that bundle, validates it with `publint`, and shows the allowlisted
+package inventory. `prepublishOnly` runs the complete check. The Git-guardrail smoke requires Bash
+and Node.js. Native `npm pack`, a clean tarball install, and a published `npx` invocation remain
+release gates on a runner that has npm.
 
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 Keep those links resolvable when editing or moving a satellite.

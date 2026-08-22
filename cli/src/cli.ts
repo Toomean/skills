@@ -1,16 +1,210 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { constants, realpathSync } from "node:fs";
+import { cp, lstat, mkdir, realpath } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, normalize, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 
-import { COMMANDS } from "./commands.ts";
-import { EXIT_CODES, USAGE } from "./constants.ts";
-import { CliError, errorDetails } from "./errors.ts";
-import type { CliResult } from "./types.ts";
+const SKILL = "earned-done";
+const PROVIDERS = ["claude", "codex"] as const;
+const USAGE = [
+  "usage:",
+  "  toomean-skills list",
+  "  toomean-skills install earned-done --provider claude|codex|all [--dry-run]",
+].join("\n");
 
-function json(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
+type Provider = (typeof PROVIDERS)[number];
+
+interface CliResult {
+  readonly exitCode: 0 | 1 | 2 | 4;
+  readonly stderr: string;
+  readonly stdout: string;
+}
+
+interface Destination {
+  readonly provider: Provider;
+  readonly root: string;
+  readonly target: string;
+}
+
+class CliFailure extends Error {
+  readonly exitCode: 1 | 2 | 4;
+
+  constructor(exitCode: 1 | 2 | 4, message: string) {
+    super(message);
+    this.exitCode = exitCode;
+  }
+}
+
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function parseCommandArgs(
+  argv: readonly string[],
+  options: Record<string, { readonly short?: string; readonly type: "boolean" | "string" }>,
+) {
+  try {
+    return parseArgs({ args: [...argv], options, strict: true, allowPositionals: true });
+  } catch (error) {
+    throw new CliFailure(2, message(error));
+  }
+}
+
+function selectedProviders(value: unknown): readonly Provider[] {
+  if (value === "all") return PROVIDERS;
+  if (value !== "claude" && value !== "codex") {
+    throw new CliFailure(2, "install requires --provider claude|codex|all");
+  }
+  return [value];
+}
+
+function providerRoot(provider: Provider, environment: NodeJS.ProcessEnv): string {
+  const variable = provider === "claude" ? "CLAUDE_SKILLS_DIR" : "CODEX_SKILLS_DIR";
+  const fallback = provider === "claude" ? join(homedir(), ".claude", "skills") : join(homedir(), ".agents", "skills");
+  const configured = environment[variable] ?? fallback;
+  if (!isAbsolute(configured)) throw new CliFailure(2, `${variable} must be an absolute non-root path`);
+  const root = normalize(configured);
+  if (parse(root).root === root) throw new CliFailure(2, `${variable} must be an absolute non-root path`);
+  return root;
+}
+
+function pathContains(parent: string, child: string): boolean {
+  const delta = relative(parent, child);
+  return delta === "" || (delta !== ".." && !delta.startsWith(`..${sep}`) && !isAbsolute(delta));
+}
+
+async function packagedSkillRoot(packageRoot: string): Promise<string> {
+  const source = join(packageRoot, SKILL);
+  try {
+    const skillMetadata = await lstat(join(source, "SKILL.md"));
+    if (!skillMetadata.isFile()) throw new Error("invalid source shape");
+    return await realpath(source);
+  } catch {
+    throw new CliFailure(4, `invalid packaged skill: ${SKILL}`);
+  }
+}
+
+async function targetExists(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+function formatDestinations(action: "INSTALLED" | "PLAN", destinations: readonly Destination[]): string {
+  if (destinations.length === 0) return "";
+  return `${destinations.map(({ provider, target }) => `${action}\t[${provider}]\t${SKILL}\t${target}`).join("\n")}\n`;
+}
+
+async function runList(argv: readonly string[]): Promise<CliResult> {
+  const { positionals, values } = parseCommandArgs(argv, { help: { type: "boolean", short: "h" } });
+  if (values.help === true) return { exitCode: 0, stderr: "", stdout: `${USAGE}\n` };
+  if (positionals.length !== 0) throw new CliFailure(2, "list accepts no arguments");
+  return { exitCode: 0, stderr: "", stdout: `${SKILL}\n` };
+}
+
+async function runInstall(
+  argv: readonly string[],
+  environment: NodeJS.ProcessEnv,
+  packageRoot: string,
+): Promise<CliResult> {
+  const { positionals, values } = parseCommandArgs(argv, {
+    provider: { type: "string" },
+    "dry-run": { type: "boolean" },
+    help: { type: "boolean", short: "h" },
+  });
+  if (values.help === true) return { exitCode: 0, stderr: "", stdout: `${USAGE}\n` };
+  if (positionals.length !== 1 || positionals[0] !== SKILL) {
+    throw new CliFailure(2, `install requires exactly: ${SKILL}`);
+  }
+
+  const destinations = selectedProviders(values.provider).map((provider) => {
+    const root = providerRoot(provider, environment);
+    return { provider, root, target: join(root, SKILL) };
+  });
+  const [firstDestination, secondDestination] = destinations;
+
+  if (
+    firstDestination !== undefined &&
+    secondDestination !== undefined &&
+    (pathContains(firstDestination.target, secondDestination.target) ||
+      pathContains(secondDestination.target, firstDestination.target))
+  ) {
+    throw new CliFailure(1, "provider targets must be independent");
+  }
+
+  const source = await packagedSkillRoot(packageRoot);
+
+  // Copying into the source tree can make a recursive copy consume its own output.
+  if (destinations.some(({ target }) => pathContains(source, target))) {
+    throw new CliFailure(1, "provider target overlaps the packaged skill");
+  }
+
+  const occupied = new Set<string>();
+  for (const { target } of destinations) {
+    if (await targetExists(target)) occupied.add(target);
+  }
+  if (occupied.size > 0) {
+    const stdout = `${destinations
+      .map(({ provider, target }) => `${occupied.has(target) ? "REFUSE" : "PLAN"}\t[${provider}]\t${SKILL}\t${target}`)
+      .join("\n")}\n`;
+    return { exitCode: 1, stderr: "", stdout };
+  }
+
+  if (values["dry-run"] === true) {
+    return { exitCode: 0, stderr: "", stdout: formatDestinations("PLAN", destinations) };
+  }
+
+  const installed: Destination[] = [];
+  for (const destination of destinations) {
+    try {
+      await mkdir(destination.root, { recursive: true });
+      // This is a second no-clobber check after the racy preflight on the supported runtime;
+      // recursive cp remains non-transactional.
+      await cp(source, destination.target, {
+        recursive: true,
+        force: false,
+        errorOnExist: true,
+        mode: constants.COPYFILE_EXCL,
+      });
+      installed.push(destination);
+    } catch (error) {
+      return {
+        exitCode: 4,
+        stdout: formatDestinations("INSTALLED", installed),
+        stderr:
+          `ERROR: install failed for [${destination.provider}] ${destination.target}: ${message(error)}. ` +
+          "The destination root or target may now be partial; completed installs were not removed.\n",
+      };
+    }
+  }
+
+  return { exitCode: 0, stderr: "", stdout: formatDestinations("INSTALLED", installed) };
+}
+
+export async function run(
+  argv: readonly string[],
+  environment: NodeJS.ProcessEnv,
+  packageRoot: string,
+): Promise<CliResult> {
+  try {
+    const [command, ...commandArgs] = argv;
+    if (command === undefined || command === "--help" || command === "-h") {
+      return { exitCode: 0, stderr: "", stdout: `${USAGE}\n` };
+    }
+    if (command === "list") return await runList(commandArgs);
+    if (command === "install") return await runInstall(commandArgs, environment, packageRoot);
+    throw new CliFailure(2, `unknown command: ${command}`);
+  } catch (error) {
+    const exitCode = error instanceof CliFailure ? error.exitCode : 4;
+    return { exitCode, stderr: `ERROR: ${message(error)}\n`, stdout: "" };
+  }
 }
 
 const canonicalModulePath = realpathSync(fileURLToPath(import.meta.url));
@@ -24,47 +218,8 @@ function isDirectEntry(entryPath: string | undefined): boolean {
   }
 }
 
-// Command handlers own parsing and success output; this boundary owns global help, dispatch, and
-// failure formatting.
-export async function run(
-  argv: readonly string[],
-  environment: NodeJS.ProcessEnv,
-  packageRoot: string,
-): Promise<CliResult> {
-  const [commandName, ...commandArgs] = argv;
-  const terminatorIndex = argv.indexOf("--");
-  const optionArgs = terminatorIndex === -1 ? argv : argv.slice(0, terminatorIndex);
-  const wantsJson = optionArgs.includes("--json");
-
-  try {
-    if (commandName === undefined || commandName === "--help" || commandName === "-h") {
-      return { exitCode: EXIT_CODES.success, stderr: "", stdout: `${USAGE}\n` };
-    }
-
-    const command = COMMANDS.get(commandName);
-    if (command === undefined) throw new CliError("usage", `unknown or unavailable command: ${commandName}`);
-    return await command(commandArgs, { environment, packageRoot });
-  } catch (error) {
-    const details = errorDetails(error);
-    if (wantsJson) {
-      return {
-        exitCode: details.exitCode,
-        stderr: "",
-        stdout: json({ code: details.code, error: details.message, exitCode: details.exitCode, ok: false }),
-      };
-    }
-    return {
-      exitCode: details.exitCode,
-      stderr: `ERROR ${details.code}: ${details.message}\n`,
-      stdout: "",
-    };
-  }
-}
-
-// Bind the testable command contract to the real process only at the executable boundary.
 async function main(): Promise<void> {
-  const packageRoot = resolve(dirname(canonicalModulePath), "..");
-  const result = await run(process.argv.slice(2), process.env, packageRoot);
+  const result = await run(process.argv.slice(2), process.env, resolve(dirname(canonicalModulePath), ".."));
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   process.exitCode = result.exitCode;
@@ -72,8 +227,7 @@ async function main(): Promise<void> {
 
 if (isDirectEntry(process.argv[1])) {
   main().catch((error: unknown) => {
-    const details = errorDetails(error);
-    process.stderr.write(`ERROR ${details.code}: ${details.message}\n`);
-    process.exitCode = details.exitCode;
+    process.stderr.write(`ERROR: ${message(error)}\n`);
+    process.exitCode = 4;
   });
 }
