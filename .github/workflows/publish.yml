@@ -63,6 +63,4 @@ jobs:
           fi
 
       - name: Publish package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-        run: npm publish --access public --tag "${{ steps.release.outputs.dist_tag }}" --provenance
+        run: npm publish --access public --tag "${{ steps.release.outputs.dist_tag }}"
