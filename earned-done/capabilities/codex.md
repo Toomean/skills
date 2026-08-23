@@ -1,7 +1,8 @@
 # Codex capabilities — planning catalog
 
-Last synced: 2026-08-16 — model positioning and subagent configuration against official OpenAI guidance; the exec
-surface below was re-verified against installed `codex-cli 0.147.0`.
+Last synced: 2026-08-21 — model positioning, subagents, skills, hooks, and configuration against
+official OpenAI guidance; the exec surface below was re-verified against installed
+`codex-cli 0.149.0`.
 
 Read this after selecting the Codex adapter. These are planning triggers, not guarantees; verify
 current official Codex documentation before relying on semantics that affect correctness,
@@ -45,8 +46,9 @@ isolation, security, cost, or persistence.
   `-a/--ask-for-approval`; **`codex exec` does not** — there the levers are the sandbox mode plus
   the explicit wideners (`--add-dir`, sandbox `-c` overrides, the `dangerously-*` flags).
 - **`codex exec` surface** — `--output-schema` (structured result), `-o/--output-last-message`,
-  `--json`, `resume <id>` / `--last`, `--ephemeral`, `--add-dir`, `--ignore-user-config`. Use for
-  provider-local scripted work with a machine-checkable result.
+  `--json`, `resume`, `fork`, `review`, `--ephemeral`, `--add-dir`, `--ignore-user-config`,
+  `--ignore-rules`, `--strict-config`, and `--approve-for-me`. Use for provider-local scripted work
+  with a machine-checkable result.
 - **Other commands** — `codex apply`, `codex fork`, `codex plugin`, `codex doctor`, and
   `codex mcp-server`, which exposes Codex itself as an MCP server (bridgeable from another harness,
   e.g. `claude mcp add`).

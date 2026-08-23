@@ -30,6 +30,12 @@ question, not the sample framework or naming.
 - "Backward compatibility" without verified external consumers
 - Code preserved "just in case"
 
+**Current-requirement gate:** Before adding a custom manifest, builder, checker, catalog, or
+orchestration layer, name the current user-visible requirement that the standard tool cannot meet.
+A future install, update, scale, or safety requirement is not evidence that its infrastructure
+should exist now. Try the native path under [T9](SKILL.md#instrument-traps); if it produces the
+needed artifact, delete the custom layer and reopen the design only when an observed gap appears.
+
 **Example:**
 ```typescript
 // BAD: Deprecated re-export with no external consumers
@@ -146,10 +152,29 @@ result/tagged values, protocol statuses, or events), not through a documented no
 the implementation does not provide.
 
 Document the non-obvious contract: ownership, lifecycle, invariants, recovery/failure
-responsibilities, concurrency, and surprising asymmetry when relevant. Comments explain *why* the
-code has its shape; they do not narrate the body. This is a boundary rule, not a docstring quota:
-locally obvious private helpers need neither ceremonial documentation nor a separate architecture
-document.
+responsibilities, concurrency, and surprising asymmetry when relevant.
+
+#### Comment quality
+
+A useful comment answers at least one question the code cannot express as clearly on its own:
+
+- **What responsibility or contract does this block own?** State the purpose, observable outcome,
+  boundary, or guarantee at a level above the individual statements.
+- **Why does a non-obvious decision exist?** Preserve the constraint, tradeoff, or rationale that
+  would otherwise invite a plausible but wrong simplification.
+
+Do not translate syntax into prose, narrate the sequence of the body, duplicate a distant comment,
+or promise a guarantee that the implementation and tests do not enforce. Prefer names, types, and
+simpler code when they can carry the meaning directly. Locally obvious private helpers need no
+ceremonial documentation; comments are an information test, not a quota.
+
+```typescript
+// BAD: Look up the command, then call it.
+const command = commands.get(name);
+
+// GOOD: Commands own behavior; this boundary only dispatches and normalizes failures.
+const command = commands.get(name);
+```
 
 Documentation cannot repay needless abstraction cost. Apply the Deletion Test and simplify first;
 then document the necessary contract that remains.
