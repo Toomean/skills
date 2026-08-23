@@ -152,6 +152,14 @@ single CLI bundle), smoke-tests that bundle, validates it with `publint`, and sh
 package inventory. `prepublishOnly` runs the complete check. Native `npm pack`, a clean tarball
 install, and a published `npx` invocation remain release gates on a runner that has npm.
 
+## Publishing
+
+Publishing is owned by [the GitHub Actions release workflow](.github/workflows/publish.yml). An
+`earned-done-v<package.version>` GitHub Release runs the complete package check and publishes
+`@toomean/skills` to npm. Prerelease versions use the `next` dist-tag; stable versions use `latest`.
+The workflow reads the npm credential from the `NPM_ACCESS_TOKEN` repository secret. Never commit
+that credential; local `.env` files are ignored.
+
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 Keep those links resolvable when editing or moving a satellite.
 
