@@ -157,9 +157,7 @@ install, and a published `npx` invocation remain release gates on a runner that 
 Publishing is owned by [the GitHub Actions release workflow](.github/workflows/publish.yml). An
 `earned-done-v<package.version>` GitHub Release runs the complete package check and publishes
 `@toomean/skills` to npm. Prerelease versions use the `next` dist-tag; stable versions use `latest`.
-The workflow authenticates through npm Trusted Publishing, bound to this repository and
-`publish.yml`. GitHub supplies a short-lived OIDC identity for each publish, so the workflow needs
-no long-lived npm token. npm automatically attaches provenance to eligible OIDC publishes.
+Releases are published from GitHub Actions through npm Trusted Publishing with provenance.
 
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 Keep those links resolvable when editing or moving a satellite.
