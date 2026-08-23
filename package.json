@@ -31,7 +31,7 @@
     "check:smoke": "node dist/toomean-skills.mjs list",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm check",
-    "test": "node --test cli/test/cli.test.ts && bash test/git-guardrails.sh",
+    "test": "node --test cli/test/cli.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

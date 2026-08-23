@@ -79,11 +79,3 @@ orchestration, sandboxing, skills, hooks, interaction, persistence, and integrat
   unreviewed scratch memory.
 - `~/.codex/config.toml` is the primary configuration; a repository's `.codex/config.toml` is loaded
   ONLY when that repository is marked `trust_level = "trusted"`. Profiles are selected with `-p`.
-
-## Git guardrail hook
-
-Codex hooks are now a published contract (see the catalog), but hook TRUST IS BOUND TO THE HOOK'S
-HASH: editing a hook silently stops it from firing until it is confirmed again. Treat a hook as
-enforcement only after re-confirming it post-edit with a deny-test plus positive control. The
-existing [`git-guardrails.sh`](../hooks/git-guardrails.sh) is still not declared Codex-compatible — do not install or
-advertise it as a Codex enforcement hook until such a test proves Codex actually blocks the call.

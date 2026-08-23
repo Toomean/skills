@@ -69,9 +69,3 @@ orchestration, scheduling, skills, hooks, interaction, and memory.
   ~25 KB of that index are loaded — keep it an index, not a store.
 - Project instructions belong in the project's `CLAUDE.md` or `.claude/rules/`.
 - Claude Code hook wiring belongs in `.claude/settings*.json`.
-
-## Git guardrail hook
-
-[`git-guardrails.sh`](../hooks/git-guardrails.sh) and the
-[Git guardrail documentation](../hooks/git-guardrails.md) currently implement and document the
-Claude Code `PreToolUse` contract. Do not infer Codex compatibility from this adapter.

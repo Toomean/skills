@@ -34,9 +34,8 @@ On a non-trivial task, the skill asks the agent to:
    exact evidence and any honest remaining limitations.
 
 The folder includes the portable workflow, a code-review playbook, the opinionated `ReviewTaste`
-simplicity/architecture lens, the `EndOfStepSweep` cleanup pass, thin Claude Code and Codex adapters,
-and an optional Claude-only `PreToolUse` Git guardrail. The guardrail blocks a bounded set of
-dangerous Git command forms; it is a backstop, not a shell sandbox.
+simplicity/architecture lens, the `EndOfStepSweep` cleanup pass, and thin Claude Code and Codex
+adapters.
 
 For a substantive task, the default interaction has one explicit planning checkpoint before
 implementation, then independent review and evidence before handoff. A prompt may pre-authorize
@@ -150,9 +149,8 @@ pnpm check
 
 `pnpm check` type-checks and tests the source, runs `pnpm pack --dry-run` (whose `prepack` builds the
 single CLI bundle), smoke-tests that bundle, validates it with `publint`, and shows the allowlisted
-package inventory. `prepublishOnly` runs the complete check. The Git-guardrail smoke requires Bash
-and Node.js. Native `npm pack`, a clean tarball install, and a published `npx` invocation remain
-release gates on a runner that has npm.
+package inventory. `prepublishOnly` runs the complete check. Native `npm pack`, a clean tarball
+install, and a published `npx` invocation remain release gates on a runner that has npm.
 
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 Keep those links resolvable when editing or moving a satellite.
