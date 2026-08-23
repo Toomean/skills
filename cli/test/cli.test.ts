@@ -207,7 +207,7 @@ test("a missing packaged SKILL.md is rejected before destination writes", async 
 test("the source entrypoint still runs when invoked through a symlink", async () => {
   await using root = await temporaryRoot("entry");
   const entry = join(root.path, "toomean-skills.ts");
-  await symlink(join(packageRoot, "cli", "src", "cli.ts"), entry, "file");
+  await symlink(join(packageRoot, "cli", "src", "main.ts"), entry, "file");
 
   const { stderr, stdout } = await execFileAsync(process.execPath, [entry, "--help"], { cwd: packageRoot });
   assert.equal(stderr, "");
