@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { run } from "./cli.ts";
-import { errorMessage, EXIT_CODES } from "./cli-contracts.ts";
+import { errorMessage, EXIT_CODES } from "./contracts.ts";
 
 const canonicalModulePath = realpathSync(fileURLToPath(import.meta.url));
 

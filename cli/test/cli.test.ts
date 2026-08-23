@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { run } from "../src/cli.ts";
+import { type Destination, InstallationPaths } from "../src/installation-paths.ts";
 
 const packageRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), "../.."));
 const execFileAsync = promisify(execFile);
@@ -83,13 +84,16 @@ test("single-provider install recursively copies the packaged directory", async 
 });
 
 test("provider all rejects identical or nested targets before writes", async () => {
-  for (const [relation, dryRun] of [
-    ["identical", false],
-    ["nested", true],
+  for (const [relation, nestedProvider, dryRun] of [
+    ["identical", undefined, false],
+    ["codex-under-claude", "codex", true],
+    ["claude-under-codex", "claude", false],
   ] as const) {
     await using root = await temporaryRoot(`overlap-${relation}`);
-    const claudeRoot = join(root.path, "claude");
-    const codexRoot = relation === "identical" ? claudeRoot : join(claudeRoot, "earned-done", "nested");
+    let claudeRoot = join(root.path, "claude");
+    let codexRoot = relation === "identical" ? claudeRoot : join(root.path, "codex");
+    if (nestedProvider === "codex") codexRoot = join(claudeRoot, "earned-done", "nested");
+    if (nestedProvider === "claude") claudeRoot = join(codexRoot, "earned-done", "nested");
     const argv = ["install", "earned-done", "--provider", "all"];
     if (dryRun) argv.push("--dry-run");
 
@@ -100,11 +104,27 @@ test("provider all rejects identical or nested targets before writes", async () 
     );
 
     assert.equal(result.exitCode, 1, relation);
-    assert.match(result.stderr, /provider targets must be independent/);
+    assert.match(result.stderr, /provider targets must not overlap/);
     for (const providerRoot of new Set([claudeRoot, codexRoot])) {
       await assert.rejects(lstat(providerRoot), { code: "ENOENT" });
     }
   }
+});
+
+test("target overlap checks every destination pair", () => {
+  const firstRoot = join(packageRoot, "first-provider-root");
+  const laterRoot = join(packageRoot, "later-provider-root");
+  const nestedRoot = join(laterRoot, "earned-done", "nested");
+  const destinations: readonly Destination[] = [
+    { provider: "claude", root: firstRoot, target: join(firstRoot, "earned-done") },
+    { provider: "codex", root: laterRoot, target: join(laterRoot, "earned-done") },
+    { provider: "claude", root: nestedRoot, target: join(nestedRoot, "earned-done") },
+  ];
+
+  assert.throws(
+    () => new InstallationPaths({}, packageRoot).assertNoTargetOverlap(destinations),
+    /provider targets must not overlap/,
+  );
 });
 
 test("an occupied file, directory, or broken symlink is never replaced", async () => {

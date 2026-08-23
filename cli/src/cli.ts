@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { cp, mkdir } from "node:fs/promises";
 import { parseArgs } from "node:util";
 
-import { CliFailure, type CliResult, errorMessage, EXIT_CODES, SKILL } from "./cli-contracts.ts";
+import { CliFailure, type CliResult, errorMessage, EXIT_CODES, SKILL } from "./contracts.ts";
 import {
   type Destination,
   InstallationPaths,
@@ -66,7 +66,7 @@ class Cli {
     }
 
     const destinations = this.paths.destinations(this.selectedProviders(values.provider));
-    this.paths.assertIndependent(destinations);
+    this.paths.assertNoTargetOverlap(destinations);
     const source = await this.paths.packagedSkillRoot();
     this.paths.assertOutsideSource(source, destinations);
 
