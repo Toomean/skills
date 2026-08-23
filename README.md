@@ -50,8 +50,8 @@ ceremony.
 
 ## Install with npm
 
-The npm package has not been published yet. The first alpha will use the `next` tag; after it is
-available, inspect or install the bundled skill without keeping a repository checkout:
+The alpha is published under the `next` tag. Inspect or install the bundled skill without keeping
+a repository checkout:
 
 ```sh
 npx @toomean/skills@next list
@@ -157,8 +157,7 @@ install, and a published `npx` invocation remain release gates on a runner that 
 Publishing is owned by [the GitHub Actions release workflow](.github/workflows/publish.yml). An
 `earned-done-v<package.version>` GitHub Release runs the complete package check and publishes
 `@toomean/skills` to npm. Prerelease versions use the `next` dist-tag; stable versions use `latest`.
-The workflow reads the npm credential from the `NPM_ACCESS_TOKEN` repository secret. Never commit
-that credential; local `.env` files are ignored.
+Releases are published from GitHub Actions through npm Trusted Publishing with provenance.
 
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 Keep those links resolvable when editing or moving a satellite.
