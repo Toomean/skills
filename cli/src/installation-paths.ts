@@ -33,7 +33,6 @@ export class InstallationPaths {
   private readonly environment: NodeJS.ProcessEnv;
   private readonly packageRoot: string;
 
-  /** Uses the supplied environment and package root for deterministic provider and source resolution. */
   constructor(environment: NodeJS.ProcessEnv, packageRoot: string) {
     this.environment = environment;
     this.packageRoot = packageRoot;

@@ -16,6 +16,10 @@ const USAGE = [
   "  toomean-skills install earned-done --provider claude|codex|all [--dry-run]",
 ].join("\n");
 
+/**
+ * Executes catalog and installation commands while returning output instead of writing to process streams.
+ * Install commands may write to provider skill roots; callers retain control of presentation and process exit.
+ */
 class Cli {
   private readonly paths: InstallationPaths;
 
@@ -23,6 +27,7 @@ class Cli {
     this.paths = new InstallationPaths(environment, packageRoot);
   }
 
+  /** Dispatches one invocation and converts expected and unexpected failures into a CliResult. */
   async run(argv: readonly string[]): Promise<CliResult> {
     try {
       const [command, ...commandArgs] = argv;
@@ -36,6 +41,7 @@ class Cli {
     }
   }
 
+  /** Parses a subcommand's arguments and exposes parser failures as CLI usage errors. */
   private parseCliArgs(
     argv: readonly string[],
     options: Record<string, { readonly short?: string; readonly type: "boolean" | "string" }>,
@@ -47,6 +53,7 @@ class Cli {
     }
   }
 
+  /** Returns the packaged skill catalog after rejecting unsupported list arguments. */
   private async runList(argv: readonly string[]): Promise<CliResult> {
     const { positionals, values } = this.parseCliArgs(argv, { help: { type: "boolean", short: "h" } });
     if (values.help === true) return this.usage();
@@ -54,6 +61,10 @@ class Cli {
     return { exitCode: EXIT_CODES.success, stderr: "", stdout: `${SKILL}\n` };
   }
 
+  /**
+   * Plans or copies the packaged skill into the selected provider roots without replacing targets.
+   * Multi-provider copies are sequential and preserve completed destinations if a later copy fails.
+   */
   private async runInstall(argv: readonly string[]): Promise<CliResult> {
     const { positionals, values } = this.parseCliArgs(argv, {
       provider: { type: "string" },
@@ -116,15 +127,18 @@ class Cli {
     };
   }
 
+  /** Returns the command synopsis as a successful CLI result. */
   private usage(): CliResult {
     return { exitCode: EXIT_CODES.success, stderr: "", stdout: `${USAGE}\n` };
   }
 
+  /** Formats destination outcomes as stable, line-oriented CLI records. */
   private formatDestinations(action: "INSTALLED" | "PLAN", destinations: readonly Destination[]): string {
     if (destinations.length === 0) return "";
     return `${destinations.map(({ provider, target }) => `${action}\t[${provider}]\t${SKILL}\t${target}`).join("\n")}\n`;
   }
 
+  /** Validates one provider name or expands the explicit all-provider selection. */
   private selectedProviders(value: unknown): readonly Provider[] {
     if (value === "all") return PROVIDERS;
     const provider = PROVIDERS.find((candidate) => candidate === value);
@@ -135,6 +149,7 @@ class Cli {
   }
 }
 
+/** Runs one CLI invocation against an explicit environment and package root. */
 export function run(
   argv: readonly string[],
   environment: NodeJS.ProcessEnv,
