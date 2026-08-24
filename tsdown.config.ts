@@ -8,5 +8,5 @@ export default defineConfig({
   format: "esm",
   outDir: "dist",
   platform: "node",
-  target: "node24",
+  target: "node22",
 });
