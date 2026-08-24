@@ -1,6 +1,6 @@
 {
   "name": "@toomean/skills",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Evidence-first working methods for coding agents.",
   "license": "Apache-2.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "earned-done"
   ],
   "engines": {
-    "node": ">=24.18"
+    "node": ">=22.12.0"
   },
   "packageManager": "pnpm@11.11.0",
   "publishConfig": {

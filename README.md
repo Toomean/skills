@@ -111,7 +111,7 @@ The explicit preflight catches both normal and broken existing links before `ln`
 directory symlink. Inspect an existing path yourself instead of replacing it blindly. These manual
 commands assume one installer at a time; they are not a concurrent transaction protocol.
 
-The CLI requires Node.js 24.18+. Maintainer work also requires pnpm.
+The CLI requires Node.js 22.12.0+. Maintainer work also requires pnpm.
 
 ## Use
 

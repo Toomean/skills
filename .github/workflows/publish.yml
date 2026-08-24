@@ -62,5 +62,39 @@ jobs:
             echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Pack the minimum-runtime artifact
+        id: runtime_package
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          tarball="$RUNNER_TEMP/toomean-skills-${package_version}.tgz"
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          test -f "$tarball"
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+
+      - name: Set up the minimum Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.12.0
+
+      - name: Verify the packed CLI on the minimum runtime
+        env:
+          CLAUDE_SKILLS_DIR: ${{ runner.temp }}/minimum-runtime/claude-skills
+          CODEX_SKILLS_DIR: ${{ runner.temp }}/minimum-runtime/codex-skills
+          TARBALL: ${{ steps.runtime_package.outputs.tarball }}
+        run: |
+          prefix="$RUNNER_TEMP/minimum-runtime/npm"
+          npm install --ignore-scripts --prefix "$prefix" "$TARBALL"
+          cli="$prefix/node_modules/.bin/toomean-skills"
+          "$cli" list
+          "$cli" install earned-done --provider all
+          cmp earned-done/SKILL.md "$CLAUDE_SKILLS_DIR/earned-done/SKILL.md"
+          cmp earned-done/SKILL.md "$CODEX_SKILLS_DIR/earned-done/SKILL.md"
+
+      - name: Restore the publishing runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+          registry-url: https://registry.npmjs.org
+
       - name: Publish package
         run: npm publish --access public --tag "${{ steps.release.outputs.dist_tag }}"
