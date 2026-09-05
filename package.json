@@ -1,6 +1,6 @@
 {
   "name": "@toomean/skills",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Evidence-first working methods for coding agents.",
   "license": "Apache-2.0",
   "type": "module",

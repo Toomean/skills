@@ -5,7 +5,7 @@ description: Evidence-first orchestration and review for coding agents. Use for 
 
 # Earned Done
 
-Protocol revision: 2026-08-21-r029. Rules carry stable IDs (**C#** core rule, **T#** trap,
+Protocol revision: 2026-08-31-r030. Rules carry stable IDs (**C#** core rule, **T#** trap,
 **W#** workflow step); a deleted rule retires its ID forever.
 
 This skill is the portable, project-agnostic protocol — how we work, not facts about any one
@@ -180,6 +180,9 @@ These cover shell, Git, infrastructure, and harness failures.
 16. **[T16] Treat the probe harness as a suspect.** Before interpreting a result, audit the
     instrument's form: exact match/expansion, args, cwd, shell, stdin, selected target, and whether
     the chokepoint ran. Prefer deterministic, count-based controls over timing or mtime guesses.
+    In multi-command shell probes, use task-specific variable names; do not assign shell-reserved or
+    special parameters (for example zsh `path`, which rewrites `PATH`), and select an explicit shell
+    when semantics matter.
 
 ## Per-task workflow
 
