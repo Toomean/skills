@@ -3,8 +3,9 @@
 Evidence-first working methods for coding agents.
 
 This public umbrella collects small, serious, opinionated skills for how coding agents work. The
-first alpha ships only `earned-done`; future skills can be added as their own package folders
-without turning one skill into a catch-all prompt.
+currently published alpha ships `earned-done`; `brainstorm` is a candidate package addition pending
+its release. Skills live in their own package folders rather than turning one skill into a
+catch-all prompt.
 
 `earned-done` grew out of building a personal coding-agent harness for accurate, autonomous
 completion — not merely launching agents — and from using coding agents on real work and personal
@@ -47,6 +48,9 @@ ceremony.
 
 - [`earned-done`](earned-done/SKILL.md) — Evidence-first orchestration and review for coding agents,
   with independent roles, empirical verification, and bounded evolution.
+- [`brainstorm`](brainstorm/SKILL.md) — Candidate, pending release: broad, structured ideation that
+  produces a divergence artifact for a downstream converger without choosing a winner. It is
+  standalone; `earned-done` is an optional complementary workflow, not a dependency.
 
 ## Install with npm
 
@@ -59,13 +63,24 @@ npx @toomean/skills@next install earned-done --provider codex
 npx @toomean/skills@next install earned-done --provider claude
 ```
 
+The published `@next` package does not yet contain `brainstorm`. To try the candidate from this
+checkout, run these commands from the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+node dist/toomean-skills.mjs install brainstorm --provider codex
+```
+
+Once released, the same `@next` package commands will install `brainstorm`.
+
 Use `--provider all` to install both copies, or add `--dry-run` to perform the same source and
 destination preflight without writing. `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the
 default user roots. Overrides must be absolute, non-root paths that resolve to independent locations
 outside the packaged skill; the operator is responsible for choosing them.
 
-The installer copies the complete packaged `earned-done` directory. It creates missing provider
-roots but never replaces any existing final path, including a file, directory, or broken symlink.
+The installer copies the complete selected skill directory. It creates missing provider roots but
+never replaces any existing final path, including a file, directory, or broken symlink.
 For `--provider all`, both targets are checked before either provider root is created. There is no
 force, update, or uninstall command. An unexpected copy failure can leave a newly created root, a
 partial target, or an already completed first-provider copy; the CLI reports that possibility and
@@ -154,16 +169,19 @@ install, and a published `npx` invocation remain release gates on a runner that 
 
 ## Publishing
 
-Publishing is owned by [the GitHub Actions release workflow](.github/workflows/publish.yml). An
-`earned-done-v<package.version>` GitHub Release runs the complete package check and publishes
-`@toomean/skills` to npm. Prerelease versions use the `next` dist-tag; stable versions use `latest`.
-Releases are published from GitHub Actions through npm Trusted Publishing with provenance.
+Publishing is owned by [the GitHub Actions release workflow](.github/workflows/publish.yml). A
+GitHub Release tagged `earned-done-v<package.version>` or `brainstorm-v<package.version>` runs the
+complete package check and publishes `@toomean/skills` to npm. Prerelease versions use the `next`
+dist-tag; stable versions use `latest`. Releases are published from GitHub Actions through npm
+Trusted Publishing with provenance.
 
 Repository documentation uses relative Markdown links for relationships between shipped documents.
 Keep those links resolvable when editing or moving a satellite.
 
-Releases use per-skill tags such as `earned-done-v0.1.0-alpha.1`, so future skills can evolve
-independently even when they share an optional umbrella package.
+The package contains all bundled skills at a single npm package version. A skill-named release tag
+such as `earned-done-v0.1.0-alpha.1` or `brainstorm-v0.1.0-alpha.4` selects the release event; it
+does not create independent npm versions for individual skills. Publishing a release of either
+skill-named tag publishes the package version and its complete bundle.
 
 This alpha is a reviewed prompt and tool contract, not a security boundary. Provider behavior and
 available features can drift, and native optional subagents remain governed by their harness.

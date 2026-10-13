@@ -2,7 +2,7 @@ import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, normalize, parse, relative, sep } from "node:path";
 
-import { CliFailure, EXIT_CODES, SKILL } from "./contracts.ts";
+import { CliFailure, EXIT_CODES, type Skill } from "./contracts.ts";
 
 const PROVIDER_CONFIG = {
   claude: {
@@ -39,10 +39,10 @@ export class InstallationPaths {
   }
 
   /** Returns an absolute, non-root installation root and skill target for each requested provider. */
-  destinations(providers: readonly Provider[]): readonly Destination[] {
+  destinations(providers: readonly Provider[], skill: Skill): readonly Destination[] {
     return providers.map((provider) => {
       const root = this.providerRoot(provider);
-      return { provider, root, target: join(root, SKILL) };
+      return { provider, root, target: join(root, skill) };
     });
   }
 
@@ -61,14 +61,14 @@ export class InstallationPaths {
   }
 
   /** Validates a regular-file SKILL.md marker and returns the canonical packaged-skill directory. */
-  async packagedSkillRoot(): Promise<string> {
-    const source = join(this.packageRoot, SKILL);
+  async packagedSkillRoot(skill: Skill): Promise<string> {
+    const source = join(this.packageRoot, skill);
     try {
       const skillMetadata = await lstat(join(source, "SKILL.md"));
       if (!skillMetadata.isFile()) throw new Error("invalid source shape");
       return await realpath(source);
     } catch {
-      throw new CliFailure(EXIT_CODES.internal, `invalid packaged skill: ${SKILL}`);
+      throw new CliFailure(EXIT_CODES.internal, `invalid packaged skill: ${skill}`);
     }
   }
 

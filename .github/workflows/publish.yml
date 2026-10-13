@@ -46,9 +46,10 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           package_version="$(node -p "require('./package.json').version")"
-          expected_tag="earned-done-v${package_version}"
-          if [[ "$RELEASE_TAG" != "$expected_tag" ]]; then
-            echo "Expected release tag $expected_tag, got $RELEASE_TAG" >&2
+          earned_done_tag="earned-done-v${package_version}"
+          brainstorm_tag="brainstorm-v${package_version}"
+          if [[ "$RELEASE_TAG" != "$earned_done_tag" && "$RELEASE_TAG" != "$brainstorm_tag" ]]; then
+            echo "Expected release tag $earned_done_tag or $brainstorm_tag, got $RELEASE_TAG" >&2
             exit 1
           fi
           head_commit="$(git rev-parse HEAD)"
@@ -87,8 +88,11 @@ jobs:
           cli="$prefix/node_modules/.bin/toomean-skills"
           "$cli" list
           "$cli" install earned-done --provider all
+          "$cli" install brainstorm --provider all
           cmp earned-done/SKILL.md "$CLAUDE_SKILLS_DIR/earned-done/SKILL.md"
           cmp earned-done/SKILL.md "$CODEX_SKILLS_DIR/earned-done/SKILL.md"
+          cmp brainstorm/SKILL.md "$CLAUDE_SKILLS_DIR/brainstorm/SKILL.md"
+          cmp brainstorm/SKILL.md "$CODEX_SKILLS_DIR/brainstorm/SKILL.md"
 
       - name: Restore the publishing runtime
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

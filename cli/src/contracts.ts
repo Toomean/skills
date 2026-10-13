@@ -1,4 +1,6 @@
-export const SKILL = "earned-done";
+export const SKILLS = ["earned-done", "brainstorm"] as const;
+
+export type Skill = (typeof SKILLS)[number];
 
 export const EXIT_CODES = {
   success: 0,

@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { cp, mkdir } from "node:fs/promises";
 import { parseArgs } from "node:util";
 
-import { CliFailure, type CliResult, errorMessage, EXIT_CODES, SKILL } from "./contracts.ts";
+import { CliFailure, type CliResult, errorMessage, EXIT_CODES, SKILLS, type Skill } from "./contracts.ts";
 import {
   type Destination,
   InstallationPaths,
@@ -13,7 +13,7 @@ import {
 const USAGE = [
   "usage:",
   "  toomean-skills list",
-  "  toomean-skills install earned-done --provider claude|codex|all [--dry-run]",
+  `  toomean-skills install ${SKILLS.join("|")} --provider claude|codex|all [--dry-run]`,
 ].join("\n");
 
 /**
@@ -58,7 +58,7 @@ class Cli {
     const { positionals, values } = this.parseCliArgs(argv, { help: { type: "boolean", short: "h" } });
     if (values.help === true) return this.usage();
     if (positionals.length !== 0) throw new CliFailure(EXIT_CODES.usage, "list accepts no arguments");
-    return { exitCode: EXIT_CODES.success, stderr: "", stdout: `${SKILL}\n` };
+    return { exitCode: EXIT_CODES.success, stderr: "", stdout: `${SKILLS.join("\n")}\n` };
   }
 
   /**
@@ -72,13 +72,14 @@ class Cli {
       help: { type: "boolean", short: "h" },
     });
     if (values.help === true) return this.usage();
-    if (positionals.length !== 1 || positionals[0] !== SKILL) {
-      throw new CliFailure(EXIT_CODES.usage, `install requires exactly: ${SKILL}`);
+    if (positionals.length !== 1 || !SKILLS.includes(positionals[0] as Skill)) {
+      throw new CliFailure(EXIT_CODES.usage, `install requires exactly one supported skill: ${SKILLS.join(" or ")}`);
     }
+    const skill = positionals[0] as Skill;
 
-    const destinations = this.paths.destinations(this.selectedProviders(values.provider));
+    const destinations = this.paths.destinations(this.selectedProviders(values.provider), skill);
     this.paths.assertNoTargetOverlap(destinations);
-    const source = await this.paths.packagedSkillRoot();
+    const source = await this.paths.packagedSkillRoot(skill);
     this.paths.assertOutsideSource(source, destinations);
 
     const occupied = new Set<string>();
@@ -87,13 +88,13 @@ class Cli {
     }
     if (occupied.size > 0) {
       const stdout = `${destinations
-        .map(({ provider, target }) => `${occupied.has(target) ? "REFUSE" : "PLAN"}\t[${provider}]\t${SKILL}\t${target}`)
+        .map(({ provider, target }) => `${occupied.has(target) ? "REFUSE" : "PLAN"}\t[${provider}]\t${skill}\t${target}`)
         .join("\n")}\n`;
       return { exitCode: EXIT_CODES.refused, stderr: "", stdout };
     }
 
     if (values["dry-run"] === true) {
-      return { exitCode: EXIT_CODES.success, stderr: "", stdout: this.formatDestinations("PLAN", destinations) };
+      return { exitCode: EXIT_CODES.success, stderr: "", stdout: this.formatDestinations("PLAN", destinations, skill) };
     }
 
     const installed: Destination[] = [];
@@ -112,7 +113,7 @@ class Cli {
       } catch (error) {
         return {
           exitCode: EXIT_CODES.internal,
-          stdout: this.formatDestinations("INSTALLED", installed),
+          stdout: this.formatDestinations("INSTALLED", installed, skill),
           stderr:
             `ERROR: install failed for [${destination.provider}] ${destination.target}: ${errorMessage(error)}. ` +
             "The destination root or target may now be partial; completed installs were not removed.\n",
@@ -123,7 +124,7 @@ class Cli {
     return {
       exitCode: EXIT_CODES.success,
       stderr: "",
-      stdout: this.formatDestinations("INSTALLED", installed),
+      stdout: this.formatDestinations("INSTALLED", installed, skill),
     };
   }
 
@@ -133,9 +134,9 @@ class Cli {
   }
 
   /** Formats destination outcomes as stable, line-oriented CLI records. */
-  private formatDestinations(action: "INSTALLED" | "PLAN", destinations: readonly Destination[]): string {
+  private formatDestinations(action: "INSTALLED" | "PLAN", destinations: readonly Destination[], skill: Skill): string {
     if (destinations.length === 0) return "";
-    return `${destinations.map(({ provider, target }) => `${action}\t[${provider}]\t${SKILL}\t${target}`).join("\n")}\n`;
+    return `${destinations.map(({ provider, target }) => `${action}\t[${provider}]\t${skill}\t${target}`).join("\n")}\n`;
   }
 
   /** Validates one provider name or expands the explicit all-provider selection. */
