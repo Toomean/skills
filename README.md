@@ -3,9 +3,9 @@
 Evidence-first working methods for coding agents.
 
 This public umbrella collects small, serious, opinionated skills for how coding agents work. The
-currently published alpha ships `earned-done`; `brainstorm` is a candidate package addition pending
-its release. Skills live in their own package folders rather than turning one skill into a
-catch-all prompt.
+`@toomean/skills` package bundles `earned-done` and `brainstorm` at one package version. `brainstorm`
+is included starting with alpha.4. Skills live in their own package folders rather than turning one
+skill into a catch-all prompt.
 
 `earned-done` grew out of building a personal coding-agent harness for accurate, autonomous
 completion — not merely launching agents — and from using coding agents on real work and personal
@@ -19,36 +19,11 @@ finish. One provider is enough. If the harness already exposes an authorized dif
 subagent, the skill assigns it to one already-planned read-only reviewer slot without increasing
 reviewer count or fan-out.
 
-## What `earned-done` does
-
-On a non-trivial task, the skill asks the agent to:
-
-1. align on the intended outcome and constraints, then reserve enough capacity to implement,
-   review, verify, and finish;
-2. keep implementation and skeptical review independent — through subagents when supported, or
-   through clearly separated passes when they are not;
-3. run the project's real feedback loop early, then use a focused repro, test, mutation, or control
-   when an important claim needs stronger evidence;
-4. review both correctness and intent: edge cases, blast radius, unnecessary complexity, stale
-   abstractions, and whether the change solves the problem that was actually asked;
-5. repair findings, run the relevant full test/check suite, sweep for leftovers, and hand off the
-   exact evidence and any honest remaining limitations.
-
-The folder includes the portable workflow, a code-review playbook, the opinionated `ReviewTaste`
-simplicity/architecture lens, the `EndOfStepSweep` cleanup pass, and thin Claude Code and Codex
-adapters.
-
-For a substantive task, the default interaction has one explicit planning checkpoint before
-implementation, then independent review and evidence before handoff. A prompt may pre-authorize
-reversible implementation after the plan, but it never pre-authorizes pushing, publishing, merging,
-or other external state changes. Tiny, reversible edits use the proportional path instead of full
-ceremony.
-
 ## Skills
 
 - [`earned-done`](earned-done/SKILL.md) — Evidence-first orchestration and review for coding agents,
   with independent roles, empirical verification, and bounded evolution.
-- [`brainstorm`](brainstorm/SKILL.md) — Candidate, pending release: broad, structured ideation that
+- [`brainstorm`](brainstorm/SKILL.md) — Broad, structured ideation that
   produces a divergence artifact for a downstream converger without choosing a winner. It is
   standalone; `earned-done` is an optional complementary workflow, not a dependency.
 
@@ -61,18 +36,9 @@ a repository checkout:
 npx @toomean/skills@next list
 npx @toomean/skills@next install earned-done --provider codex
 npx @toomean/skills@next install earned-done --provider claude
+npx @toomean/skills@next install brainstorm --provider codex
+npx @toomean/skills@next install brainstorm --provider claude
 ```
-
-The published `@next` package does not yet contain `brainstorm`. To try the candidate from this
-checkout, run these commands from the repository root:
-
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-node dist/toomean-skills.mjs install brainstorm --provider codex
-```
-
-Once released, the same `@next` package commands will install `brainstorm`.
 
 Use `--provider all` to install both copies, or add `--dry-run` to perform the same source and
 destination preflight without writing. `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the

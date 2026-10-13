@@ -15,11 +15,17 @@ in [`SKILL.md`](SKILL.md).
 - [`ideation-techniques.md`](ideation-techniques.md) — practical prompt moves
   such as exclusion constraints, inversion, SCAMPER, random seeds, analogy, and brainwriting.
 
-## Installation status
+## Install
 
-This is a candidate package addition and is pending release; the currently published `@next`
-package does not yet include it. To try this candidate from a checkout, run these commands from
-the repository root:
+`brainstorm` is included in `@toomean/skills` starting with alpha.4. Install it from the published
+`next` tag with either provider:
+
+```sh
+npx @toomean/skills@next install brainstorm --provider codex
+npx @toomean/skills@next install brainstorm --provider claude
+```
+
+As a Git-checkout fallback, run these commands from the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -27,13 +33,7 @@ pnpm build
 node dist/toomean-skills.mjs install brainstorm --provider codex
 ```
 
-Use `--provider all` for both provider roots, or `--dry-run` to preflight without writing. After
-release, the package install commands will be:
-
-```sh
-npx @toomean/skills@next install brainstorm --provider codex
-npx @toomean/skills@next install brainstorm --provider claude
-```
+Use `--provider all` for both provider roots, or `--dry-run` to preflight without writing.
 
 The package also includes `earned-done`, an optional complementary workflow skill; brainstorm does
 not require it. The installer copies the selected skill and never replaces an existing final path.
