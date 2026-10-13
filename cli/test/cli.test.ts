@@ -30,7 +30,7 @@ test("list, help, and usage stay small and text-only", async () => {
   assert.deepEqual(await run(["list"], {}, packageRoot), {
     exitCode: 0,
     stderr: "",
-    stdout: "earned-done\nbrainstorm\n",
+    stdout: "earned-done\nbrainstorm\nmental-map\n",
   });
 
   for (const argv of [["--help"], ["-h"], ["list", "--help"], ["install", "--help"]]) {
@@ -178,6 +178,48 @@ test("brainstorm dry-run and missing source preflight do not write provider root
   await assert.rejects(lstat(providerRoot), { code: "ENOENT" });
 });
 
+test("mental-map dry-run, packaged-source validation, and all-provider copy cover both files", async () => {
+  await using root = await temporaryRoot("mental-map-install");
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const dryRun = await run(
+    ["install", "mental-map", "--provider", "all", "--dry-run"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
+  assert.equal(dryRun.exitCode, 0);
+  assert.match(dryRun.stdout, /^PLAN\t\[claude\]\tmental-map/);
+  assert.match(dryRun.stdout, /PLAN\t\[codex\]\tmental-map/);
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+
+  const fixturePackage = join(root.path, "fixture");
+  await mkdir(join(fixturePackage, "earned-done"), { recursive: true });
+  const missing = await run(
+    ["install", "mental-map", "--provider", "codex"],
+    { CODEX_SKILLS_DIR: codexRoot },
+    fixturePackage,
+  );
+  assert.equal(missing.exitCode, 4);
+  assert.match(missing.stderr, /invalid packaged skill: mental-map/);
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+
+  const installed = await run(
+    ["install", "mental-map", "--provider", "all"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
+  assert.equal(installed.exitCode, 0);
+  for (const providerRoot of [claudeRoot, codexRoot]) {
+    for (const file of ["SKILL.md", "README.md"]) {
+      assert.equal(
+        await readFile(join(providerRoot, "mental-map", file), "utf8"),
+        await readFile(join(packageRoot, "mental-map", file), "utf8"),
+      );
+    }
+  }
+});
+
 test("provider all rejects identical or nested targets before writes", async () => {
   for (const [relation, nestedProvider, dryRun] of [
     ["identical", undefined, false],
@@ -247,6 +289,23 @@ test("an occupied file, directory, or broken symlink is never replaced", async (
     if (kind === "directory") assert.equal(await readFile(join(target, "foreign.txt"), "utf8"), "foreign directory\n");
     if (kind === "broken-symlink") assert.equal(await readlink(target), join(root.path, "missing"));
   }
+});
+
+test("mental-map install preserves an occupied target", async () => {
+  await using root = await temporaryRoot("mental-map-occupied");
+  const providerRoot = join(root.path, "codex", "skills");
+  const target = join(providerRoot, "mental-map");
+  await mkdir(target, { recursive: true });
+  await writeFile(join(target, "user-owned.txt"), "keep me\n");
+
+  const result = await run(
+    ["install", "mental-map", "--provider", "codex"],
+    { CODEX_SKILLS_DIR: providerRoot },
+    packageRoot,
+  );
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stdout, /^REFUSE\t\[codex\]\tmental-map/);
+  assert.equal(await readFile(join(target, "user-owned.txt"), "utf8"), "keep me\n");
 });
 
 test("provider all refuses before creating the other destination", async () => {

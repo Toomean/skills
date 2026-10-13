@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "earned-done",
-    "brainstorm"
+    "brainstorm",
+    "mental-map"
   ],
   "engines": {
     "node": ">=22.12.0"

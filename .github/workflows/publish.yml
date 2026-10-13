@@ -48,8 +48,9 @@ jobs:
           package_version="$(node -p "require('./package.json').version")"
           earned_done_tag="earned-done-v${package_version}"
           brainstorm_tag="brainstorm-v${package_version}"
-          if [[ "$RELEASE_TAG" != "$earned_done_tag" && "$RELEASE_TAG" != "$brainstorm_tag" ]]; then
-            echo "Expected release tag $earned_done_tag or $brainstorm_tag, got $RELEASE_TAG" >&2
+          mental_map_tag="mental-map-v${package_version}"
+          if [[ "$RELEASE_TAG" != "$earned_done_tag" && "$RELEASE_TAG" != "$brainstorm_tag" && "$RELEASE_TAG" != "$mental_map_tag" ]]; then
+            echo "Expected release tag $earned_done_tag, $brainstorm_tag, or $mental_map_tag; got $RELEASE_TAG" >&2
             exit 1
           fi
           head_commit="$(git rev-parse HEAD)"
@@ -89,10 +90,15 @@ jobs:
           "$cli" list
           "$cli" install earned-done --provider all
           "$cli" install brainstorm --provider all
+          "$cli" install mental-map --provider all
           cmp earned-done/SKILL.md "$CLAUDE_SKILLS_DIR/earned-done/SKILL.md"
           cmp earned-done/SKILL.md "$CODEX_SKILLS_DIR/earned-done/SKILL.md"
           cmp brainstorm/SKILL.md "$CLAUDE_SKILLS_DIR/brainstorm/SKILL.md"
           cmp brainstorm/SKILL.md "$CODEX_SKILLS_DIR/brainstorm/SKILL.md"
+          cmp mental-map/SKILL.md "$CLAUDE_SKILLS_DIR/mental-map/SKILL.md"
+          cmp mental-map/README.md "$CLAUDE_SKILLS_DIR/mental-map/README.md"
+          cmp mental-map/SKILL.md "$CODEX_SKILLS_DIR/mental-map/SKILL.md"
+          cmp mental-map/README.md "$CODEX_SKILLS_DIR/mental-map/README.md"
 
       - name: Restore the publishing runtime
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

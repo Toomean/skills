@@ -24,7 +24,7 @@ async function fixture(name: string, withMarkers = true) {
   const checkout = join(temporary.path, "checkout with spaces");
   await mkdir(checkout, { recursive: true });
   await writeFile(join(checkout, "install.sh"), scriptSource);
-  for (const skill of ["earned-done", "brainstorm"]) {
+  for (const skill of ["earned-done", "brainstorm", "mental-map"]) {
     await mkdir(join(checkout, skill), { recursive: true });
     if (withMarkers) await writeFile(join(checkout, skill, "SKILL.md"), `${skill} marker\n`);
   }
@@ -46,7 +46,7 @@ function install(checkout: string, args: string[], env: Record<string, string> =
 }
 
 test("links either selected skill for either provider from another cwd and paths with spaces", async () => {
-  for (const skill of ["earned-done", "brainstorm"]) {
+  for (const skill of ["earned-done", "brainstorm", "mental-map"]) {
     for (const provider of ["codex", "claude"]) {
       await using disposable = await fixture(`${skill}-${provider}`);
       const { temporary, checkout } = disposable;

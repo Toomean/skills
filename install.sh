@@ -7,12 +7,12 @@ fail() {
   exit 1
 }
 
-[ "$#" -eq 2 ] || fail 'usage: sh ./install.sh earned-done|brainstorm codex|claude'
+[ "$#" -eq 2 ] || fail 'usage: sh ./install.sh earned-done|brainstorm|mental-map codex|claude'
 
 skill=$1
 provider=$2
 case "$skill" in
-  earned-done|brainstorm) ;;
+  earned-done|brainstorm|mental-map) ;;
   *) fail "unsupported skill: $skill" ;;
 esac
 case "$provider" in

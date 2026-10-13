@@ -1,4 +1,4 @@
-export const SKILLS = ["earned-done", "brainstorm"] as const;
+export const SKILLS = ["earned-done", "brainstorm", "mental-map"] as const;
 
 export type Skill = (typeof SKILLS)[number];
 
