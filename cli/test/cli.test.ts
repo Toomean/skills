@@ -27,7 +27,11 @@ function temporaryRoot(name: string) {
 }
 
 test("list, help, and usage stay small and text-only", async () => {
-  assert.deepEqual(await run(["list"], {}, packageRoot), { exitCode: 0, stderr: "", stdout: "earned-done\n" });
+  assert.deepEqual(await run(["list"], {}, packageRoot), {
+    exitCode: 0,
+    stderr: "",
+    stdout: "earned-done\nbrainstorm\n",
+  });
 
   for (const argv of [["--help"], ["-h"], ["list", "--help"], ["install", "--help"]]) {
     const result = await run(argv, {}, packageRoot);
@@ -41,6 +45,8 @@ test("list, help, and usage stay small and text-only", async () => {
     ["unknown"],
     ["install", "all", "--provider", "codex"],
     ["install", "earned-done"],
+    ["install", "brainstorm", ".."],
+    ["install", "../brainstorm", "--provider", "codex"],
     ["install", "earned-done", "--provider", "other"],
   ]) {
     const result = await run(argv, {}, packageRoot);
@@ -48,6 +54,25 @@ test("list, help, and usage stay small and text-only", async () => {
     assert.match(result.stderr, /^ERROR:/);
     assert.equal(result.stdout, "");
   }
+});
+
+test("unsupported and traversal-like skill selections are rejected before writes", async () => {
+  await using root = await temporaryRoot("invalid-skill");
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+
+  for (const skill of ["not-a-skill", "../brainstorm", "brainstorm/../earned-done"]) {
+    const result = await run(
+      ["install", skill, "--provider", "all"],
+      { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+      packageRoot,
+    );
+    assert.equal(result.exitCode, 2, skill);
+    assert.equal(result.stdout, "", skill);
+  }
+
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
 });
 
 test("dry-run performs preflight without creating provider roots", async () => {
@@ -81,6 +106,76 @@ test("single-provider install recursively copies the packaged directory", async 
   for (const file of ["SKILL.md", "references/codex.md"]) {
     assert.equal(await readFile(join(target, file), "utf8"), await readFile(join(packageRoot, "earned-done", file), "utf8"));
   }
+});
+
+test("brainstorm recursively copies only its selected payload alongside earned-done", async () => {
+  await using root = await temporaryRoot("brainstorm-install");
+  const providerRoot = join(root.path, "codex", "skills");
+  const earnedDoneTarget = join(providerRoot, "earned-done");
+  const brainstormTarget = join(providerRoot, "brainstorm");
+  await mkdir(earnedDoneTarget, { recursive: true });
+  await writeFile(join(earnedDoneTarget, "user-owned.txt"), "keep me\n");
+
+  const result = await run(
+    ["install", "brainstorm", "--provider", "codex"],
+    { CODEX_SKILLS_DIR: providerRoot },
+    packageRoot,
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.match(result.stdout, /\tbrainstorm\t/);
+  for (const file of ["SKILL.md", "README.md", "ideation-techniques.md"]) {
+    assert.equal(
+      await readFile(join(brainstormTarget, file), "utf8"),
+      await readFile(join(packageRoot, "brainstorm", file), "utf8"),
+    );
+  }
+  assert.equal(await readFile(join(earnedDoneTarget, "user-owned.txt"), "utf8"), "keep me\n");
+});
+
+test("brainstorm no-overwrite and all-provider preflight preserve existing targets", async () => {
+  await using root = await temporaryRoot("brainstorm-preflight");
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const target = join(codexRoot, "brainstorm");
+  await mkdir(target, { recursive: true });
+  await writeFile(join(target, "foreign.txt"), "preserve\n");
+
+  const result = await run(
+    ["install", "brainstorm", "--provider", "all"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
+
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stdout, /^PLAN\t\[claude\]\tbrainstorm/);
+  assert.match(result.stdout, /REFUSE\t\[codex\]\tbrainstorm/);
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  assert.equal(await readFile(join(target, "foreign.txt"), "utf8"), "preserve\n");
+});
+
+test("brainstorm dry-run and missing source preflight do not write provider roots", async () => {
+  await using root = await temporaryRoot("brainstorm-source");
+  const providerRoot = join(root.path, "provider", "skills");
+  const dryRun = await run(
+    ["install", "brainstorm", "--provider", "codex", "--dry-run"],
+    { CODEX_SKILLS_DIR: providerRoot },
+    packageRoot,
+  );
+  assert.equal(dryRun.exitCode, 0);
+  assert.match(dryRun.stdout, /^PLAN\t\[codex\]\tbrainstorm/);
+  await assert.rejects(lstat(providerRoot), { code: "ENOENT" });
+
+  const fixturePackage = join(root.path, "fixture");
+  await mkdir(join(fixturePackage, "earned-done"), { recursive: true });
+  const missing = await run(
+    ["install", "brainstorm", "--provider", "codex"],
+    { CODEX_SKILLS_DIR: providerRoot },
+    fixturePackage,
+  );
+  assert.equal(missing.exitCode, 4);
+  assert.match(missing.stderr, /invalid packaged skill: brainstorm/);
+  await assert.rejects(lstat(providerRoot), { code: "ENOENT" });
 });
 
 test("provider all rejects identical or nested targets before writes", async () => {
