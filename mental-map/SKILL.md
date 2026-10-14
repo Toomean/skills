@@ -154,9 +154,12 @@ with the mechanics and a source citation, not denser jargon.
 
 Close with a short map in three buckets:
 
-- **Confirmed** — claims the user now states correctly, in their words.
-- **Still shaky** — corrected misunderstandings (one-line accurate version each) and unanswered or
-  unverified questions.
+- **Confirmed** — claims the user has demonstrated in a correct retelling, in their own words,
+  after any relevant correction. Keep correctly stated parts of an otherwise mistaken retelling;
+  your source-verified explanation, the user's assent or exposure to it, and an unanswered stop
+  request do not demonstrate the corrected mechanics.
+- **Still shaky** — corrected misunderstandings the user has not retold correctly (one-line accurate
+  version each), and unanswered or unverified questions.
 - **Follow-ups** — pre-existing debt, cleanup ideas, or ticket candidates that surfaced. List them;
   do not fix them during the session.
 
