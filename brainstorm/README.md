@@ -17,30 +17,9 @@ in [`SKILL.md`](SKILL.md).
 
 ## Install
 
-`brainstorm` is included in `@toomean/skills` starting with alpha.4. Install it from the published
-`next` tag with either provider:
-
-```sh
-npx @toomean/skills@next install brainstorm --provider codex
-npx @toomean/skills@next install brainstorm --provider claude
-```
-
-As a Git-checkout fallback, run these commands from the repository root:
-
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-node dist/toomean-skills.mjs install brainstorm --provider codex
-```
-
-Use `--provider all` for both provider roots, or `--dry-run` to preflight without writing.
-
-The package also includes `earned-done`, an optional complementary workflow skill; brainstorm does
-not require it. The installer copies the selected skill and never replaces an existing final path.
-See the [public package guide](https://github.com/Toomean/skills#install-with-npm) for package
-release status and installer behavior. A release bundles all skills at one npm package version; the
-skill-named release tag selects the publishing event, not an independent npm version for this
-skill.
+`brainstorm` is included in `@toomean/skills`. See the [public installation guide](https://github.com/Toomean/skills#install-with-npm)
+for npm and Git-checkout options. The package also includes `earned-done` as an optional complement;
+brainstorm works on its own.
 
 ## Using it
 

@@ -1,153 +1,52 @@
-# toomean/skills
+# @toomean/skills
 
-Evidence-first working methods for coding agents.
-
-This public umbrella collects small, serious, opinionated skills for how coding agents work. The
-`@toomean/skills` package bundles `earned-done` and `brainstorm` at one package version. `brainstorm`
-is included starting with alpha.4. Skills live in their own package folders rather than turning one
-skill into a catch-all prompt.
-
-`earned-done` grew out of building a personal coding-agent harness for accurate, autonomous
-completion — not merely launching agents — and from using coding agents on real work and personal
-projects. Its premise is that capable models can usually make useful routing choices with light
-guidance. The skill carries the durable principles, evidence standards, and review taste shaped by
-that experience instead of hard-coding a scheduler.
-
-It is prompt-first, not another orchestration service. Claude Code or Codex remains the runtime and
-facilitator; the skill tells it how to plan, delegate when available, review, verify, repair, and
-finish. One provider is enough. If the harness already exposes an authorized different-family
-subagent, the skill assigns it to one already-planned read-only reviewer slot without increasing
-reviewer count or fan-out.
+Prompt-first working methods for coding agents. Claude Code and Codex are the runtimes; either
+provider works on its own.
 
 ## Skills
 
-- [`earned-done`](earned-done/SKILL.md) — Evidence-first orchestration and review for coding agents,
-  with independent roles, empirical verification, and bounded evolution.
-- [`brainstorm`](brainstorm/SKILL.md) — Broad, structured ideation that
-  produces a divergence artifact for a downstream converger without choosing a winner. It is
-  standalone; `earned-done` is an optional complementary workflow, not a dependency.
+- [`earned-done`](earned-done/SKILL.md) — evidence-first implementation, review, and verification.
+- [`brainstorm`](brainstorm/SKILL.md) — broad ideation that hands off options without choosing one.
 
 ## Install with npm
 
-The alpha is published under the `next` tag. Inspect or install the bundled skill without keeping
-a repository checkout:
+With [Node.js 22.12.0 or newer](https://nodejs.org/), install one skill for one provider:
 
 ```sh
-npx @toomean/skills@next list
 npx @toomean/skills@next install earned-done --provider codex
-npx @toomean/skills@next install earned-done --provider claude
-npx @toomean/skills@next install brainstorm --provider codex
-npx @toomean/skills@next install brainstorm --provider claude
 ```
 
-Use `--provider all` to install both copies, or add `--dry-run` to perform the same source and
-destination preflight without writing. `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the
-default user roots. Overrides must be absolute, non-root paths that resolve to independent locations
-outside the packaged skill; the operator is responsible for choosing them.
+Replace `earned-done` with `brainstorm`, or `codex` with `claude`. `--provider all` installs the
+selected skill to both providers; `--dry-run` checks destinations without writing.
+`CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the defaults
+`~/.agents/skills` and `~/.claude/skills` respectively, for example:
+`CODEX_SKILLS_DIR="$HOME/my-skills" npx @toomean/skills@next install brainstorm --provider codex`.
 
-The installer copies the complete selected skill directory. It creates missing provider roots but
-never replaces any existing final path, including a file, directory, or broken symlink.
-For `--provider all`, both targets are checked before either provider root is created. There is no
-force, update, or uninstall command. An unexpected copy failure can leave a newly created root, a
-partial target, or an already completed first-provider copy; the CLI reports that possibility and
-never tries to repair it by deleting files.
+The npm installer copies the selected skill and never replaces an existing destination, including
+a file, directory, or broken symlink. Unexpected copy failures can leave a newly created root, a
+partial destination, or a completed first copy when installing to both providers; it does not
+remove files to repair a failure. There is no force, update, or uninstall command.
 
-## Install from Git (fallback)
+## Install from Git
 
-The no-npm fallback is a durable Git checkout. The commands below create direct symlinks into that
-checkout, so moving or deleting it breaks the installation.
+Without Node/npm, a durable Git checkout can provide direct symlinks instead:
 
 ```sh
 git clone https://github.com/Toomean/skills.git
 cd skills
+sh ./install.sh earned-done codex
 ```
 
-Install for Codex:
-
-```sh
-codex_skills_dir="${CODEX_SKILLS_DIR:-$HOME/.agents/skills}"
-mkdir -p "$codex_skills_dir"
-codex_target="$codex_skills_dir/earned-done"
-if [ -e "$codex_target" ] || [ -L "$codex_target" ]; then
-  echo "already exists: $codex_target" >&2
-  exit 1
-fi
-ln -s "$PWD/earned-done" "$codex_target"
-```
-
-Install for Claude Code:
-
-```sh
-claude_skills_dir="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-mkdir -p "$claude_skills_dir"
-claude_target="$claude_skills_dir/earned-done"
-if [ -e "$claude_target" ] || [ -L "$claude_target" ]; then
-  echo "already exists: $claude_target" >&2
-  exit 1
-fi
-ln -s "$PWD/earned-done" "$claude_target"
-```
-
-The explicit preflight catches both normal and broken existing links before `ln` can follow a
-directory symlink. Inspect an existing path yourself instead of replacing it blindly. These manual
-commands assume one installer at a time; they are not a concurrent transaction protocol.
-
-The CLI requires Node.js 22.12.0+. Maintainer work also requires pnpm.
+Choose `brainstorm` and/or `claude` in place of the example arguments. The script uses the same
+provider-root overrides and defaults as npm. Keep the checkout in place: moving or deleting it
+breaks the symlink.
 
 ## Use
 
-Invoke the skill explicitly in either provider. For example, in Claude Code:
+In Claude Code, invoke `/earned-done` or `/brainstorm`; in Codex, invoke `$earned-done` or
+`$brainstorm`. Either skill can be used without installing the other.
 
-```text
-/earned-done . implement the requested pagination change.
-```
+## Contributing
 
-In Codex:
-
-```text
-Use $earned-done to review this patch.
-```
-
-You do not need to repeat the protocol in the prompt. A successful load must begin with this plain
-text stance line, substituting the current revision, provider, and role:
-
-```text
-earned-done (rev <revision>) loaded — provider=<provider>, role=<role>.
-```
-
-If that line is absent, verify that the skill was installed and invoked under the expected name.
-The workflow is complete with either provider alone. A different-family subagent is used only to
-fill an already-planned read-only reviewer slot when the harness natively exposes and authorizes it.
-
-## Repository checks
-
-`package.json` is both the npm metadata and package allowlist:
-
-```sh
-pnpm install --frozen-lockfile
-pnpm check
-```
-
-`pnpm check` type-checks and tests the source, runs `pnpm pack --dry-run` (whose `prepack` builds the
-single CLI bundle), smoke-tests that bundle, validates it with `publint`, and shows the allowlisted
-package inventory. `prepublishOnly` runs the complete check. Native `npm pack`, a clean tarball
-install, and a published `npx` invocation remain release gates on a runner that has npm.
-
-## Publishing
-
-Publishing is owned by [the GitHub Actions release workflow](.github/workflows/publish.yml). A
-GitHub Release tagged `earned-done-v<package.version>` or `brainstorm-v<package.version>` runs the
-complete package check and publishes `@toomean/skills` to npm. Prerelease versions use the `next`
-dist-tag; stable versions use `latest`. Releases are published from GitHub Actions through npm
-Trusted Publishing with provenance.
-
-Repository documentation uses relative Markdown links for relationships between shipped documents.
-Keep those links resolvable when editing or moving a satellite.
-
-The package contains all bundled skills at a single npm package version. A skill-named release tag
-such as `earned-done-v0.1.0-alpha.1` or `brainstorm-v0.1.0-alpha.4` selects the release event; it
-does not create independent npm versions for individual skills. Publishing a release of either
-skill-named tag publishes the package version and its complete bundle.
-
-This alpha is a reviewed prompt and tool contract, not a security boundary. Provider behavior and
-available features can drift, and native optional subagents remain governed by their harness.
+Run `pnpm install --frozen-lockfile` and `pnpm check` before proposing changes. See
+[the brainstorm guide](brainstorm/README.md) and the [Apache-2.0 license](LICENSE).
