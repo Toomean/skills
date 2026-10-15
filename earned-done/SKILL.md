@@ -297,9 +297,10 @@ otherwise perform a distinct skeptical validation pass. The validator receives m
 conclusion plus the claims it makes, is told to be skeptical and find errors, gets a "specifically
 verify" list pointing at file:line or source code, and returns ✅ / ⚠ / ❌ per claim with cited
 evidence. If it reverses a conclusion, REVERSE it in the answer — don't paper over with hedges.
-For a review deliverable, [CodeReview's antithesis pass](CodeReview.md#order-of-operations) is this
-validator pass: it stays independent from the draft author and can occupy one of [W3]'s two default
-reviewer contexts. It is not automatically an additional context or wave.
+For a review deliverable, follow [CodeReview's antithesis rule](CodeReview.md#order-of-operations):
+use an independent validator when an authorized reviewer context is available; otherwise run a
+distinct skeptical pass and record that author-independence was unavailable. It is not automatically
+an additional context or wave.
 
 **Consensus is not verification.** Re-run empirics when the crux remains unverified, whether or not
 reviewers agree. Prefer different primary emphases over repeated identical prompts. A native

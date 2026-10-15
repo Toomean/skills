@@ -172,10 +172,13 @@ source of truth). After such an agent returns, `git status` + `git log` +
    evidence pipeline (steps 5-7) before shipping — a candidate labeled "suspicion" is never
    dropped silently: run the cheap check (grep the notes/spec) or ship it as an explicitly-open
    question. Do not silently drop a cheap-to-check suspicion.
-   The validator must be independent from the draft author. It may occupy one of [W3's two default
-   reviewer contexts](SKILL.md#per-task-workflow); antithesis does not automatically add a context or
-   wave. Add one only when required independence or expertise cannot fit an existing slot, and name
-   why. Use a distinct skeptical lens, not N identical refuters
+   Use a validator independent from the draft author whenever an authorized reviewer context is
+   available. If none is available, the orchestrator runs a distinct skeptical pass and records
+   that author-independence was unavailable; temporal separation alone does not make the pass
+   independent. The validator may occupy one of [W3's two default reviewer
+   contexts](SKILL.md#per-task-workflow); antithesis does not automatically add a context or wave.
+   Add one only when required independence or expertise cannot fit an existing slot, and name why.
+   Use a distinct skeptical lens, not N identical refuters
    ([consensus is not verification](SKILL.md#independent-validator-rule)). Distinct
    from the empirical verifier of step 5: the verifier confirms NAMED claims, while antithesis
    hunts UNNAMED ones. They are not substitutes.
