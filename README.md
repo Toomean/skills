@@ -17,15 +17,12 @@ With [Node.js 22.12.0 or newer](https://nodejs.org/), install one skill for one 
 npx @toomean/skills@next install earned-done --provider codex
 ```
 
-Replace `earned-done` with `brainstorm`, or `codex` with `claude`. `--provider all` installs the
-selected skill to both providers; `--dry-run` checks destinations without writing.
+Choose `earned-done`, `brainstorm`, or `mental-map`; use `claude` or `codex` as the provider.
+`--provider all` installs the selected skill to both providers; `--dry-run` checks destinations
+without writing.
 `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the defaults
 `~/.agents/skills` and `~/.claude/skills` respectively, for example:
 `CODEX_SKILLS_DIR="$HOME/my-skills" npx @toomean/skills@next install brainstorm --provider codex`.
-
-The published npm alpha.4 does not include `mental-map`; this candidate is planned for a next
-release. The current npm command therefore cannot install it yet. A Git checkout containing the
-skill can install it using the guide below.
 
 The npm installer copies the selected skill and never replaces an existing destination, including
 a file, directory, or broken symlink. Unexpected copy failures can leave a newly created root, a

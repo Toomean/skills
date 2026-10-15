@@ -10,5 +10,3 @@ checking its shaky items.`
 
 The resume hook is not saved by default. Write notes only to a specifically approved target and
 scope.
-
-The published npm alpha.4 does not include `mental-map`; it is planned for a next release.
