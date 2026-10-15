@@ -7,6 +7,7 @@ provider works on its own.
 
 - [`earned-done`](earned-done/SKILL.md) — evidence-first implementation, review, and verification.
 - [`brainstorm`](brainstorm/SKILL.md) — broad ideation that hands off options without choosing one.
+- [`mental-map`](mental-map/SKILL.md) — source-grounded, interactive understanding with verified retellings.
 
 ## Install with npm
 
@@ -21,6 +22,10 @@ selected skill to both providers; `--dry-run` checks destinations without writin
 `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the defaults
 `~/.agents/skills` and `~/.claude/skills` respectively, for example:
 `CODEX_SKILLS_DIR="$HOME/my-skills" npx @toomean/skills@next install brainstorm --provider codex`.
+
+The published npm alpha.4 does not include `mental-map`; this candidate is planned for a next
+release. The current npm command therefore cannot install it yet. A Git checkout containing the
+skill can install it using the guide below.
 
 The npm installer copies the selected skill and never replaces an existing destination, including
 a file, directory, or broken symlink. Unexpected copy failures can leave a newly created root, a
@@ -37,14 +42,15 @@ cd skills
 sh ./install.sh earned-done codex
 ```
 
-Choose `brainstorm` and/or `claude` in place of the example arguments. The script uses the same
-provider-root overrides and defaults as npm. Keep the checkout in place: moving or deleting it
-breaks the symlink.
+Choose `brainstorm` or `mental-map`, and/or `claude`, in place of the example arguments. The script
+uses the same provider-root overrides and defaults as npm. Keep the checkout in place: moving or
+deleting it breaks the symlink.
 
 ## Use
 
-In Claude Code, invoke `/earned-done` or `/brainstorm`; in Codex, invoke `$earned-done` or
-`$brainstorm`. Either skill can be used without installing the other.
+In Claude Code, invoke `/earned-done`, `/brainstorm`, or `/mental-map`; in Codex, invoke
+`$earned-done`, `$brainstorm`, or `$mental-map`. Each skill can be used without installing the
+others.
 
 ## Contributing
 
