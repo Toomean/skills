@@ -33,13 +33,14 @@
     "check:smoke": "node dist/toomean-skills.mjs list",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm check",
-    "test": "node --test cli/test/cli.test.ts cli/test/install-script.test.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "24.13.3",
     "publint": "0.3.24",
     "tsdown": "0.22.14",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vitest": "5.0.4"
   }
 }

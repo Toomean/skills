@@ -13,8 +13,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { test } from "vitest";
 
 const repositoryRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), "../.."));
 const scriptSource = await readFile(join(repositoryRoot, "install.sh"), "utf8");
@@ -174,7 +174,7 @@ test("a late destination collision is preserved when it appears during root crea
   assert.equal((await lstat(target)).isFile(), true);
 });
 
-test("resolved filesystem root is refused before filesystem commands", { skip: process.platform !== "linux" }, async () => {
+test.skipIf(process.platform !== "linux")("resolved filesystem root is refused before filesystem commands", async () => {
   await using disposable = await fixture("resolved-root");
   const { temporary, checkout } = disposable;
   const bin = join(temporary.path, "bin");

@@ -12,9 +12,9 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, parse, resolve } from "node:path";
-import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { test } from "vitest";
 
 import { run } from "../src/cli.ts";
 import { type Destination, InstallationPaths } from "../src/installation-paths.ts";
@@ -89,97 +89,95 @@ test("unsupported and traversal-like skill selections are rejected before writes
   await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
 });
 
-for (const { skill, files } of skillInstallCases) {
-  test(`single-provider install copies ${skill}`, async () => {
-    await using root = await temporaryRoot(`single-${skill}`);
-    const providerRoot = join(root.path, "codex", "skills");
-    const target = join(providerRoot, skill);
-    const siblingTarget = join(providerRoot, skill === "earned-done" ? "brainstorm" : "earned-done");
-    await mkdir(siblingTarget, { recursive: true });
-    await writeFile(join(siblingTarget, "user-owned.txt"), "keep me\n");
+test.each(skillInstallCases)("single-provider install copies $skill", async ({ skill, files }) => {
+  await using root = await temporaryRoot(`single-${skill}`);
+  const providerRoot = join(root.path, "codex", "skills");
+  const target = join(providerRoot, skill);
+  const siblingTarget = join(providerRoot, skill === "earned-done" ? "brainstorm" : "earned-done");
+  await mkdir(siblingTarget, { recursive: true });
+  await writeFile(join(siblingTarget, "user-owned.txt"), "keep me\n");
 
-    const result = await run(["install", skill, "--provider=codex"], { CODEX_SKILLS_DIR: providerRoot }, packageRoot);
+  const result = await run(["install", skill, "--provider=codex"], { CODEX_SKILLS_DIR: providerRoot }, packageRoot);
 
-    assert.equal(result.exitCode, 0);
-    assert.equal(result.stdout, `INSTALLED\t[codex]\t${skill}\t${target}\n`);
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stdout, `INSTALLED\t[codex]\t${skill}\t${target}\n`);
+  for (const file of files) {
+    assert.equal(await readFile(join(target, file), "utf8"), await readFile(join(packageRoot, skill, file), "utf8"));
+  }
+  assert.equal(await readFile(join(siblingTarget, "user-owned.txt"), "utf8"), "keep me\n");
+});
+
+test.each(skillInstallCases)("dry-run and missing-source preflight do not write roots for $skill", async ({ skill }) => {
+  await using root = await temporaryRoot(`source-${skill}`);
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const environment = { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot };
+  const dryRun = await run(["install", skill, "--provider", "all", "--dry-run"], environment, packageRoot);
+
+  assert.equal(dryRun.exitCode, 0);
+  assert.equal(
+    dryRun.stdout,
+    `PLAN\t[claude]\t${skill}\t${join(claudeRoot, skill)}\nPLAN\t[codex]\t${skill}\t${join(codexRoot, skill)}\n`,
+  );
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+
+  const fixturePackage = join(root.path, "fixture");
+  await mkdir(join(fixturePackage, "earned-done"), { recursive: true });
+  const missing = await run(["install", skill, "--provider", "all"], environment, fixturePackage);
+  assert.equal(missing.exitCode, 4);
+  assert.equal(missing.stderr, `ERROR: invalid packaged skill: ${skill}\n`);
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+});
+
+test.each(skillInstallCases)("all-provider install copies $skill", async ({ skill, files }) => {
+  await using root = await temporaryRoot(`all-${skill}`);
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const result = await run(
+    ["install", skill, "--provider", "all"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(
+    result.stdout,
+    `INSTALLED\t[claude]\t${skill}\t${join(claudeRoot, skill)}\nINSTALLED\t[codex]\t${skill}\t${join(codexRoot, skill)}\n`,
+  );
+  for (const providerRoot of [claudeRoot, codexRoot]) {
     for (const file of files) {
-      assert.equal(await readFile(join(target, file), "utf8"), await readFile(join(packageRoot, skill, file), "utf8"));
+      assert.equal(
+        await readFile(join(providerRoot, skill, file), "utf8"),
+        await readFile(join(packageRoot, skill, file), "utf8"),
+      );
     }
-    assert.equal(await readFile(join(siblingTarget, "user-owned.txt"), "utf8"), "keep me\n");
-  });
+  }
+});
 
-  test(`dry-run and missing-source preflight do not write roots for ${skill}`, async () => {
-    await using root = await temporaryRoot(`source-${skill}`);
-    const claudeRoot = join(root.path, "claude", "skills");
-    const codexRoot = join(root.path, "codex", "skills");
-    const environment = { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot };
-    const dryRun = await run(["install", skill, "--provider", "all", "--dry-run"], environment, packageRoot);
+test.each(skillInstallCases)("all-provider preflight preserves the occupied $skill target", async ({ skill }) => {
+  await using root = await temporaryRoot(`preflight-${skill}`);
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const target = join(codexRoot, skill);
+  await mkdir(target, { recursive: true });
+  await writeFile(join(target, "foreign.txt"), "preserve\n");
 
-    assert.equal(dryRun.exitCode, 0);
-    assert.equal(
-      dryRun.stdout,
-      `PLAN\t[claude]\t${skill}\t${join(claudeRoot, skill)}\nPLAN\t[codex]\t${skill}\t${join(codexRoot, skill)}\n`,
-    );
-    await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
-    await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+  const result = await run(
+    ["install", skill, "--provider", "all"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
 
-    const fixturePackage = join(root.path, "fixture");
-    await mkdir(join(fixturePackage, "earned-done"), { recursive: true });
-    const missing = await run(["install", skill, "--provider", "all"], environment, fixturePackage);
-    assert.equal(missing.exitCode, 4);
-    assert.equal(missing.stderr, `ERROR: invalid packaged skill: ${skill}\n`);
-    await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
-    await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
-  });
-
-  test(`all-provider install copies ${skill}`, async () => {
-    await using root = await temporaryRoot(`all-${skill}`);
-    const claudeRoot = join(root.path, "claude", "skills");
-    const codexRoot = join(root.path, "codex", "skills");
-    const result = await run(
-      ["install", skill, "--provider", "all"],
-      { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
-      packageRoot,
-    );
-
-    assert.equal(result.exitCode, 0);
-    assert.equal(
-      result.stdout,
-      `INSTALLED\t[claude]\t${skill}\t${join(claudeRoot, skill)}\nINSTALLED\t[codex]\t${skill}\t${join(codexRoot, skill)}\n`,
-    );
-    for (const providerRoot of [claudeRoot, codexRoot]) {
-      for (const file of files) {
-        assert.equal(
-          await readFile(join(providerRoot, skill, file), "utf8"),
-          await readFile(join(packageRoot, skill, file), "utf8"),
-        );
-      }
-    }
-  });
-
-  test(`all-provider preflight preserves the occupied ${skill} target`, async () => {
-    await using root = await temporaryRoot(`preflight-${skill}`);
-    const claudeRoot = join(root.path, "claude", "skills");
-    const codexRoot = join(root.path, "codex", "skills");
-    const target = join(codexRoot, skill);
-    await mkdir(target, { recursive: true });
-    await writeFile(join(target, "foreign.txt"), "preserve\n");
-
-    const result = await run(
-      ["install", skill, "--provider", "all"],
-      { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
-      packageRoot,
-    );
-
-    assert.equal(result.exitCode, 1);
-    assert.equal(
-      result.stdout,
-      `PLAN\t[claude]\t${skill}\t${join(claudeRoot, skill)}\nREFUSE\t[codex]\t${skill}\t${target}\n`,
-    );
-    await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
-    assert.equal(await readFile(join(target, "foreign.txt"), "utf8"), "preserve\n");
-  });
-}
+  assert.equal(result.exitCode, 1);
+  assert.equal(
+    result.stdout,
+    `PLAN\t[claude]\t${skill}\t${join(claudeRoot, skill)}\nREFUSE\t[codex]\t${skill}\t${target}\n`,
+  );
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  assert.equal(await readFile(join(target, "foreign.txt"), "utf8"), "preserve\n");
+});
 
 test("provider all rejects identical or nested targets before writes", async () => {
   for (const [relation, nestedProvider, dryRun] of [
