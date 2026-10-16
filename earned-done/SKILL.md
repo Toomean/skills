@@ -292,21 +292,20 @@ Signals to stop and reconsider before committing: "just in case" code, parallel 
 
 ## Independent validator rule
 
-Before substantive answers, use an independent validator delegate when available and authorized;
-otherwise perform a distinct skeptical validation pass. The validator receives my preliminary
-conclusion plus the claims it makes, is told to be skeptical and find errors, gets a "specifically
-verify" list pointing at file:line or source code, and returns ✅ / ⚠ / ❌ per claim with cited
-evidence. If it reverses a conclusion, REVERSE it in the answer — don't paper over with hedges.
-For a review deliverable, follow [CodeReview's antithesis rule](CodeReview.md#order-of-operations):
-use an independent validator when an authorized reviewer context is available; otherwise run a
-distinct skeptical pass and record that author-independence was unavailable. It is not automatically
-an additional context or wave.
+Before substantive answers, use a validator independent from the author of the preliminary
+conclusion when an authorized independent context is available. Otherwise perform a distinct
+skeptical validation pass and disclose that author-independence was unavailable; temporal separation
+alone does not establish independence. Give the validator the preliminary conclusion and its claims,
+ask it to find errors, and provide a "specifically verify" list pointing to file:line or source code.
+Require ✅ / ⚠ / ❌ per claim with cited evidence. If it reverses a conclusion, reverse it in the
+answer; do not paper over the reversal with hedges. For review deliverables, use
+[CodeReview's antithesis pass](CodeReview.md#order-of-operations) for review-specific duties.
 
-**Consensus is not verification.** Re-run empirics when the crux remains unverified, whether or not
+Consensus is not verification: re-run empirics when the crux remains unverified, whether or not
 reviewers agree. Prefer different primary emphases over repeated identical prompts. A native
 different-family reviewer can add findings, but current evidence does not isolate family effects
-from prompt, context, or sampling. Decompose each finding:
-refuting a fact does not automatically refute a conclusion resting on other evidence.
+from prompt, context, or sampling. Decompose each finding: refuting a fact does not automatically
+refute a conclusion resting on other evidence.
 
 Skip independent validation for typo fixes, single-line renames, and recall of established conclusions.
 

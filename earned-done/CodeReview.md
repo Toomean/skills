@@ -163,25 +163,20 @@ source of truth). After such an agent returns, `git status` + `git log` +
    against that census. A clean signature or convincing state diagram is not evidence that an
    omitted reachable outcome does not exist.
 
-8. **Antithesis pass — the independent validator against the DRAFT, not just the diff.** Once draft
-   findings exist (steps 4-7), use the protocol's skeptical validator pass with two explicit mandates:
+8. **Antithesis pass — validate the DRAFT, not just the diff.** Once draft findings exist (steps
+   4-7), apply the [independent validator rule](SKILL.md#independent-validator-rule) with two
+   review-specific mandates:
    (a) **refute** — attack each draft finding from a default-refute stance; a finding that
    survives a genuine refutation attempt ships, one that dies is dropped or downgraded before the
    user ever sees it; (b) **complete** — hunt what the draft MISSED: side effects of the touched
    state, imprecise mechanisms, unstated assumptions. Candidates from (b) enter the normal
    evidence pipeline (steps 5-7) before shipping — a candidate labeled "suspicion" is never
-   dropped silently: run the cheap check (grep the notes/spec) or ship it as an explicitly-open
-   question. Do not silently drop a cheap-to-check suspicion.
-   Use a validator independent from the draft author whenever an authorized reviewer context is
-   available. If none is available, the orchestrator runs a distinct skeptical pass and records
-   that author-independence was unavailable; temporal separation alone does not make the pass
-   independent. The validator may occupy one of [W3's two default reviewer
-   contexts](SKILL.md#per-task-workflow); antithesis does not automatically add a context or wave.
-   Add one only when required independence or expertise cannot fit an existing slot, and name why.
-   Use a distinct skeptical lens, not N identical refuters
-   ([consensus is not verification](SKILL.md#independent-validator-rule)). Distinct
-   from the empirical verifier of step 5: the verifier confirms NAMED claims, while antithesis
-   hunts UNNAMED ones. They are not substitutes.
+   dropped silently: run the cheap check (grep the notes/spec) or ship it as an explicitly open
+   question. Do not silently drop a cheap-to-check suspicion. Respect
+   [W3's default-slot rule](SKILL.md#per-task-workflow): antithesis does not automatically add a
+   context or wave. Keep its skeptical lens distinct from the empirical verifier of step 5: the
+   verifier confirms NAMED claims, while antithesis hunts UNNAMED ones. They are not substitutes;
+   [consensus is not verification](SKILL.md#independent-validator-rule).
 
 9. **Cross-PR / interaction findings: decompose, don't collapse into "conflict".** Separate
    (a) git-level (textual conflict?), (b) semantics (what breaks after a clean merge?),
