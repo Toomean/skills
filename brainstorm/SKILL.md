@@ -76,26 +76,30 @@ Reduce these caps when the environment is tighter. Never expand an auto-triggere
 brainstorm into a deep session silently. Within the selected cap, favor quantity over judgment and
 approach the problem from deliberately different angles.
 
-The field is not wide enough to hand off until all four coverage axes below are addressed. The
-three numeric floors total twenty bullets — the bottom of the 20–40 budget above. Prior art is a
-required fourth axis, not an additional count: at least one counted mechanism entry must name an
-existing neighboring or unrelated-domain mechanism and translate it to this problem.
+To call a field complete, address all four axes below and meet their listed floors, including at
+least one prior-art mechanism entry. These completeness requirements do not override the selected
+hard cap or an early repetition stop: use forcing only within the remaining selected budget, and
+if capacity ends first, hand off an explicitly incomplete field naming its unmet targets rather
+than inventing bullets or adding rounds. The three numeric floors total twenty bullets — the
+bottom of the 20–40 budget above. Prior art is a required fourth axis, not an additional count.
 
-| Coverage axis | Ordinary floor | Deep session |
+| Coverage axis | Ordinary complete-field floor | Deep complete-field target |
 |---|---|---|
 | Mechanisms that differ in *kind*, not in phrasing | 5 | one or more per generator |
-| Prior art — how neighboring systems and unrelated domains already solve this | ≥1 counted mechanism entry; never skipped | one domain per generator |
+| Prior art — how neighboring systems and unrelated domains already solve this | ≥1 counted mechanism entry | one domain per generator |
 | How each mechanism breaks: edge cases, failure modes | 5 | ≥1 per mechanism |
 | What each mechanism costs: trade-offs, tensions, constraints | 10 | scales with mechanisms |
 
-Hitting a number is not the achievement; leaving an axis empty is the failure. A session that
-clears every count while every entry sits in one region has not diverged — recheck it against the
-semantic-diversity rule above before stopping.
+For a complete field, hitting the numbers alone is not enough: every axis must be addressed. A
+session that clears every count while every entry sits in one region has not diverged — recheck it
+against the semantic-diversity rule above before stopping. An early-stopped field may leave targets
+unmet, but must be labeled incomplete with those gaps named.
 
 For a deep session, tell each generator: **"Generate broadly without evaluating; stay within the
 assigned share of the agreed budget."** For an ordinary session, assign each generator or separated
-pass a distinct angle and a concrete bullet cap. If the field becomes tidy and repetitive before
-the selected budget is used, apply a forcing-originality technique rather than ranking ideas.
+pass a distinct angle and a concrete bullet cap. If the field becomes tidy and repetitive within a
+round, apply a forcing-originality technique only while budget remains and before the round-level
+repetition stop; once a round returns only mapped regions, stop generation.
 
 Use at least one forcing-originality technique to counter mode collapse. Exclusion is the cheapest
 of them: asking for a *good* or an *interesting* version of something leaves the target undefined
@@ -104,18 +108,21 @@ expect and ruling them out pushes the sample elsewhere. Confirm that "elsewhere"
 different rather than assuming it. See
 [`ideation-techniques.md`](ideation-techniques.md) for the catalog
 (exclusion constraints, inversion, SCAMPER, random-seed, morphological analysis, analogy,
-worst-possible-idea, and more); reach for one whenever generation gets generic.
+worst-possible-idea, and more); reach for one when generation gets generic, but only within the
+remaining budget and before a round-level repetition stop.
 
 ## The round loop
 
 A brainstorm advances by **re-entering the same question from a fresh angle**, never by
 re-attempting a pass that came out badly. Nothing has failed when the next round opens; the field
 is simply still too narrow. Each widening round claims territory the earlier ones left alone. The
-closing round generates nothing: it clusters what exists on meaning, attaches provenance, and names
-the gaps — filing work, not verdict work.
+closing assembly generates nothing: it clusters what exists on meaning, attaches provenance, and
+names the gaps — filing work, not verdict work.
 
-The session size selected above sets the round count. Stop under it the moment a round returns
-variants of regions already mapped, and never run past it to satisfy a bullet count.
+The selected session size caps widening rounds; closing assembly is not another generation round.
+Stop under the cap the moment a round returns only variants of regions already mapped. Assemble the
+existing field; label it incomplete and name unmet targets only if any remain, and never extend
+generation to satisfy a bullet count.
 
 ### The in-session reviewer's only remit is territory
 
@@ -198,7 +205,7 @@ Independence comes first; two optional widening rounds can follow it:
 - **Pass-around.** Each generator builds on another's list (classic brainwriting's second
   step). Extension, not evaluation.
 - **Recombination.** Unlike pass-around, first draft clusters by working mechanism or
-  decision-relevant organizing principle; the closing round rebuilds them. Ask 2–3 parents from
+  decision-relevant organizing principle; closing assembly rebuilds them. Ask 2–3 parents from
   different clusters for offspring combining those bases.
   Few-shot parents act as a recombination operator (Language Model Crossover,
   https://arxiv.org/abs/2302.12170); the broader diversity-preserving pattern appears in Evolution
@@ -314,9 +321,10 @@ If no converger is set up yet, say so at the top of the artifact — do not quie
 
 ## Quality indicators
 
-A **good divergent phase** stays inside its declared session budget and still leaves every coverage
-axis populated — mechanisms differing in kind, the prior art, how each mechanism breaks, and what
-each one costs. Prefer multiple
+A **good divergent phase** stays inside its declared session budget and addresses each coverage
+axis as far as that budget and repetition limits permit — mechanisms differing in kind, prior art,
+how mechanisms break, and what they cost. Label any unmet target as a specific gap rather than
+padding the field. Prefer multiple
 independent generators and diversity axes when delegation is available and authorized. Otherwise,
 accept explicitly separated single-agent passes with different forcing seeds and honest provenance;
 do not mislabel them as independent contexts.
@@ -333,8 +341,9 @@ and no winner anywhere in it.
   field is the asymmetric-critic violation this skill exists to prevent; hand off instead.
 - ❌ **Stopping at the first workable idea** — elaborating the opening framing and filing it as
   exploration.
-- ❌ **Ignoring the selected width budget** — stopping before ordinary coverage targets or silently
-  expanding an ordinary session into a deep, hundreds-of-bullets run.
+- ❌ **Letting coverage floors overrule the selected width budget** — continuing past the hard cap
+  or early repetition stop to meet a floor; label unmet targets as gaps instead. Silently expanding
+  an ordinary session into a deep, hundreds-of-bullets run is also out of bounds.
 - ❌ **A lone session where fan-out was available and authorized** — one distribution sampling
   itself; prefer independent generators whenever the environment permits them.
 - ❌ **Connected homogeneous generators without forcing** — shared context can amplify a dominant
