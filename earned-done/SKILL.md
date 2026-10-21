@@ -46,32 +46,27 @@ invocation syntax lives only in the selected adapter.
 
 ## Core rule [C1]: empirical verification before claim
 
-**Rule:** Do not claim a fix works, a design conclusion is correct, or a tool/library does X without
-empirically verifying it.
+**Rule:** Do not claim that a fix works, a design conclusion is correct, or a
+tool/library behaves a certain way without empirical verification. When user-facing text says “must
+work” or “should be stable,” stop and verify the claim.
 
-**Why:** A type check, a server starting, or an agent agreeing proves only that narrow fact. Asking
-the user to check is deferral, not verification.
+**What counts:** A failing test you write and run that passes after the fix; a log observed firing—or
+not firing—in the expected sequence of a real run; a before/after diff of compiled output; or grep
+returning expected lines. Each verifies only its narrow result. A type check, server start, or agent
+agreement establishes only that narrow fact; reasoning from names or hook dependencies and asking
+the user to check do not verify the broader claim.
 
-**Action:** If the user-facing text says "must work" or "should be stable", stop and run an
-observation that proves the claim.
+**Measurements:** For agent-reported measurements, verify the measurement method and source, not
+just the number. Keep scope, window or batch, condition, and source with every reported number.
+Re-measure fake TTFT, latency measured from epoch, or implausibly uniform values before reporting
+them.
 
-Counts as empirical: a failing test that becomes passing on the fix (write it, run it); a log line
-observed firing — or not firing — in the expected sequence of an actual run; a diff between two
-compiled outputs (a generator's or build step's) before vs after; a grep returning the expected
-lines. Does NOT count: a passing type check; reasoning from naming or hook deps "looking right"; a
-validator agent agreeing with my reasoning (a validator can also reason without verifying).
+**Open crux:** If a material gap remains, report your leaning and name the missing check. “Not
+reproduced” is not a closed verdict.
 
-**Agent-reported measurements: verify the measurement, not just the number.** A number's scope,
-window/batch, condition, and source stay in the same claim wherever recorded. Fake TTFT, latency
-from epoch, or implausibly uniform numbers mean I re-measure it before it enters a report.
-
-Two reporting traps follow:
-
-- **No verdict on an empirically open crux.** If a material gap is unverified, report the leaning
-  and name the missing check. Never turn "not reproduced" into a closed verdict.
-- **Observe third-party render or runtime behavior.** "Needs a smoke test" means the work is not
-  done. Read the complete contract or observe the real render/run before commit. For visual bugs,
-  inspect the browser, screenshot, preview, or numeric probe before choosing a mechanism.
+**Third-party behavior:** Before commit, read the complete contract or observe the real render/run;
+“needs a smoke test” means it is not done. For a visual bug, inspect the browser, screenshot,
+preview, or numeric probe before choosing a mechanism.
 
 ## Core rule [C2]: preserve independent roles; delegate when available
 
