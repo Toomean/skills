@@ -47,10 +47,9 @@ invocation syntax lives only in the selected adapter.
 ## Core rule [C1]: empirical verification before claim
 
 **Rule:** Do not claim that a fix works, a design conclusion is correct, or a
-tool/library behaves a certain way without empirical verification. When user-facing text says “must
-work” or “should be stable,” stop and verify the claim.
+tool/library behaves a certain way without empirical verification.
 
-**What counts:** A failing test you write and run that passes after the fix; a log observed firing—or
+**Empirical checks:** A failing test you write and run that passes after the fix; a log observed firing—or
 not firing—in the expected sequence of a real run; a before/after diff of compiled output; or grep
 returning expected lines. Each verifies only its narrow result. A type check, server start, or agent
 agreement establishes only that narrow fact; reasoning from names or hook dependencies and asking
