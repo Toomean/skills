@@ -5,7 +5,7 @@ provider works on its own.
 
 ## Skills
 
-- [`earned-done`](earned-done/SKILL.md) — evidence-first implementation, review, and verification.
+- [`earned-done`](earned-done/README.md) — evidence-first implementation, review, and verification.
 - [`brainstorm`](brainstorm/SKILL.md) — broad ideation that hands off options without choosing one.
 - [`mental-map`](mental-map/SKILL.md) — source-grounded, interactive understanding with verified retellings.
 
