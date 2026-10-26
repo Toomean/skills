@@ -27,11 +27,13 @@
   },
   "scripts": {
     "build": "tsdown",
-    "check": "pnpm run typecheck && pnpm test && pnpm run check:pack && pnpm run check:smoke && pnpm run check:publint",
+    "check": "pnpm run check:skills && pnpm run typecheck && pnpm test && pnpm run check:pack && pnpm run check:smoke && pnpm run check:publint",
     "check:pack": "pnpm pack --dry-run --json",
     "check:publint": "publint --strict --pack=false",
+    "check:skills": "node scripts/build-skills.mjs check",
     "check:smoke": "node dist/toomean-skills.mjs list",
-    "prepack": "pnpm run build",
+    "build:skills": "node scripts/build-skills.mjs build",
+    "prepack": "pnpm run check:skills && pnpm run build",
     "prepublishOnly": "pnpm check",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
