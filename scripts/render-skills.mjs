@@ -1,8 +1,7 @@
-const token = /\{\{([^{}]*)\}\}/gu;
 const keyPattern = /^([A-Z][A-Z0-9]*[0-9]+) — (.+)$/u;
 
 export function render(template, catalogue) {
-  if (typeof template !== "string") throw new Error("Template must be a string");
+  if (typeof template !== "function") throw new Error("Template must be a function");
   if (!catalogue || typeof catalogue !== "object" || Array.isArray(catalogue)) {
     throw new Error("Catalogue must be an object");
   }
@@ -19,19 +18,20 @@ export function render(template, catalogue) {
     ids.add(id);
   }
 
-  const keys = Object.keys(catalogue).sort();
-  const references = [];
-  const rendered = template.replace(token, (_whole, key) => {
-    if (!keyPattern.test(key)) throw new Error(`Malformed template reference: ${key}`);
-    if (!Object.hasOwn(catalogue, key)) {
-      throw new Error(`Unknown or stale template reference: ${key}`);
-    }
-    references.push(key);
-    return catalogue[key];
+  const keys = Object.keys(catalogue);
+  const references = new Map();
+  const rules = new Proxy({}, {
+    get(_target, key) {
+      if (typeof key !== "string" || !Object.hasOwn(catalogue, key)) {
+        throw new Error(`Unknown or stale template reference: ${String(key)}`);
+      }
+      references.set(key, (references.get(key) ?? 0) + 1);
+      return catalogue[key];
+    },
   });
-
-  if (/\{\{|\}\}/u.test(rendered)) throw new Error("Malformed or unresolved template token");
-  if (references.sort().join("\n") !== keys.join("\n")) {
+  const rendered = template(rules);
+  if (typeof rendered !== "string") throw new Error("Template must return a string");
+  if (keys.some((key) => references.get(key) !== 1)) {
     throw new Error("Template references must match catalogue keys exactly once");
   }
   return rendered;

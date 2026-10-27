@@ -3,18 +3,20 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rules as core } from "../sources/earned-done/catalog.mjs";
 import { rules as routing } from "../sources/earned-done/model-routing.catalog.mjs";
+import coreTemplate from "../sources/earned-done/skill.template.mjs";
+import routingTemplate from "../sources/earned-done/model-routing.template.mjs";
 import { render } from "./render-skills.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entries = [
   {
     catalogue: core,
-    template: "sources/earned-done/skill.template.md",
+    render: coreTemplate,
     output: "earned-done/SKILL.md",
   },
   {
     catalogue: routing,
-    template: "sources/earned-done/model-routing.template.md",
+    render: routingTemplate,
     output: "earned-done/references/model-routing.md",
   },
 ];
@@ -25,8 +27,7 @@ if (!["build", "check"].includes(action) || process.argv.length > 3) {
 }
 
 for (const entry of entries) {
-  const template = await readFile(resolve(root, entry.template), "utf8");
-  const expected = render(template, entry.catalogue);
+  const expected = render(entry.render, entry.catalogue);
   const outputPath = resolve(root, entry.output);
   if (action === "build") {
     await writeFile(outputPath, expected, "utf8");

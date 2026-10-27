@@ -9,48 +9,45 @@ import { test } from "vitest";
 
 import { rules as core } from "../sources/earned-done/catalog.mjs";
 import { rules as routing } from "../sources/earned-done/model-routing.catalog.mjs";
+import coreTemplate from "../sources/earned-done/skill.template.mjs";
+import routingTemplate from "../sources/earned-done/model-routing.template.mjs";
 import { render } from "./render-skills.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execFileAsync = promisify(execFile);
 
 test.each([
-  ["non-string templates", null, {}, /Template must be a string/u],
-  ["non-object catalogues", "{{A1 — First}}", null, /Catalogue must be an object/u],
-  ["duplicate IDs, even with different labels", "{{A1 — First}}", { "A1 — First": "one", "A1 — Second": "two" }, /Duplicate catalogue ID/u],
-  ["unknown references", "{{A2 — Unknown}}", { "A1 — First": "one" }, /Unknown or stale template reference/u],
-  ["stale labels", "{{A1 — Old}}", { "A1 — First": "one" }, /Unknown or stale template reference/u],
-  ["missing references", "# Layout", { "A1 — First": "one" }, /exactly once/u],
-  ["repeated references", "{{A1 — First}}\n{{A1 — First}}", { "A1 — First": "one" }, /exactly once/u],
-  ["repeated and missing references", "{{A1 — First}}\n{{A1 — First}}", { "A1 — First": "one", "B2 — Second": "two" }, /exactly once/u],
-  ["empty values", "{{A1 — First}}", { "A1 — First": "  " }, /nonempty string/u],
-  ["non-string values", "{{A1 — First}}", { "A1 — First": 1 }, /nonempty string/u],
-  ["malformed keys", "{{bad}}", { "bad": "one" }, /Malformed catalogue key/u],
-  ["malformed references", "{{bad}}", { "A1 — First": "one" }, /Malformed template reference/u],
-  ["malformed tokens", "{{A1 — First", { "A1 — First": "one" }, /Malformed or unresolved/u],
+  ["non-function templates", null, {}, /Template must be a function/u],
+  ["non-object catalogues", () => "", null, /Catalogue must be an object/u],
+  ["duplicate IDs, even with different labels", (rules) => rules["A1 — First"], { "A1 — First": "one", "A1 — Second": "two" }, /Duplicate catalogue ID/u],
+  ["unknown references", (rules) => rules["A2 — Unknown"], { "A1 — First": "one" }, /Unknown or stale template reference/u],
+  ["stale labels", (rules) => rules["A1 — Old"], { "A1 — First": "one" }, /Unknown or stale template reference/u],
+  ["missing references", () => "# Layout", { "A1 — First": "one" }, /exactly once/u],
+  ["repeated references", (rules) => `${rules["A1 — First"]}\n${rules["A1 — First"]}`, { "A1 — First": "one" }, /exactly once/u],
+  ["repeated and missing references", (rules) => `${rules["A1 — First"]}\n${rules["A1 — First"]}`, { "A1 — First": "one", "B2 — Second": "two" }, /exactly once/u],
+  ["empty values", (rules) => rules["A1 — First"], { "A1 — First": "  " }, /nonempty string/u],
+  ["non-string values", (rules) => rules["A1 — First"], { "A1 — First": 1 }, /nonempty string/u],
+  ["malformed keys", () => "", { bad: "one" }, /Malformed catalogue key/u],
+  ["non-string template result", () => 1, {}, /Template must return a string/u],
 ])("renderer rejects %s", (_name, template, catalogue, expected) => {
   assert.throws(() => render(template, catalogue), expected);
 });
 
-test("ordinary template prose and frontmatter render unchanged", () => {
-  const template = "---\nname: sample\ndescription: Ordinary metadata prose.\n---\nIntroductory prose.\n# Layout\n{{A1 — First}}";
-  assert.equal(render(template, { "A1 — First": "one" }), template.replace("{{A1 — First}}", "one"));
+test("native template literals preserve ordinary prose and interpolation bytes", () => {
+  const template = (rules) => `Ordinary {{braces}}; \`inline\`; literal \${...}; escaped \\_; ${rules["A1 — First"]}`;
+  assert.equal(
+    render(template, { "A1 — First": "value {{ID — Meaning}}" }),
+    "Ordinary {{braces}}; `inline`; literal ${...}; escaped \\_; value {{ID — Meaning}}",
+  );
 });
 
 test("committed generated Markdown matches both keyed sources", async () => {
   const pairs = [
-    ["sources/earned-done/skill.template.md", "earned-done/SKILL.md", core],
-    [
-      "sources/earned-done/model-routing.template.md",
-      "earned-done/references/model-routing.md",
-      routing,
-    ],
+    [coreTemplate, "earned-done/SKILL.md", core],
+    [routingTemplate, "earned-done/references/model-routing.md", routing],
   ];
-  for (const [templatePath, outputPath, catalogue] of pairs) {
-    const [template, output] = await Promise.all([
-      readFile(join(repo, templatePath), "utf8"),
-      readFile(join(repo, outputPath), "utf8"),
-    ]);
+  for (const [template, outputPath, catalogue] of pairs) {
+    const output = await readFile(join(repo, outputPath), "utf8");
     assert.equal(render(template, catalogue), output, outputPath);
   }
 });
@@ -105,7 +102,7 @@ test("build and check controls operate on a temporary copy", async () => {
   assert.notEqual(await readFile(outputPaths[0], "utf8"), initial[0]);
   assert.equal(await readFile(outputPaths[1], "utf8"), initial[1]);
 
-  const templatePath = join(fixture, "sources/earned-done/model-routing.template.md");
+  const templatePath = join(fixture, "sources/earned-done/model-routing.template.mjs");
   const templateBefore = await readFile(templatePath, "utf8");
   const templateAfter = templateBefore.replace("## Objective order", "## Objective order (layout)");
   assert.notEqual(templateAfter, templateBefore, "template mutation fixture must match");
