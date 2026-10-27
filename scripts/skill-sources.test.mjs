@@ -15,22 +15,25 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execFileAsync = promisify(execFile);
 
 test.each([
+  ["non-string templates", null, {}, /Template must be a string/u],
+  ["non-object catalogues", "{{A1 — First}}", null, /Catalogue must be an object/u],
   ["duplicate IDs, even with different labels", "{{A1 — First}}", { "A1 — First": "one", "A1 — Second": "two" }, /Duplicate catalogue ID/u],
-  ["unknown references", "{{A2 — Unknown}}", { "A1 — First": "one" }, /Unknown template reference/u],
-  ["stale labels", "{{A1 — Old}}", { "A1 — First": "one" }, /Stale template reference/u],
-  ["missing references", "# Layout", { "A1 — First": "one" }, /Missing template reference/u],
-  ["repeated references", "{{A1 — First}}\n{{A1 — First}}", { "A1 — First": "one" }, /Repeated template reference/u],
-  ["empty values", "{{A1 — First}}", { "A1 — First": "  " }, /Empty catalogue value/u],
+  ["unknown references", "{{A2 — Unknown}}", { "A1 — First": "one" }, /Unknown or stale template reference/u],
+  ["stale labels", "{{A1 — Old}}", { "A1 — First": "one" }, /Unknown or stale template reference/u],
+  ["missing references", "# Layout", { "A1 — First": "one" }, /exactly once/u],
+  ["repeated references", "{{A1 — First}}\n{{A1 — First}}", { "A1 — First": "one" }, /exactly once/u],
+  ["repeated and missing references", "{{A1 — First}}\n{{A1 — First}}", { "A1 — First": "one", "B2 — Second": "two" }, /exactly once/u],
+  ["empty values", "{{A1 — First}}", { "A1 — First": "  " }, /nonempty string/u],
+  ["non-string values", "{{A1 — First}}", { "A1 — First": 1 }, /nonempty string/u],
   ["malformed keys", "{{bad}}", { "bad": "one" }, /Malformed catalogue key/u],
+  ["malformed references", "{{bad}}", { "A1 — First": "one" }, /Malformed template reference/u],
   ["malformed tokens", "{{A1 — First", { "A1 — First": "one" }, /Malformed or unresolved/u],
-  ["literal prose in templates", "literal prose\n{{A1 — First}}", { "A1 — First": "one" }, /Literal prose/u],
-  ["colon-prefixed prose in templates", "Rule: never push.\n{{A1 — First}}", { "A1 — First": "one" }, /Literal prose/u],
 ])("renderer rejects %s", (_name, template, catalogue, expected) => {
   assert.throws(() => render(template, catalogue), expected);
 });
 
-test("initial frontmatter and protocol revision metadata are accepted", () => {
-  const template = "---\nname: sample\n---\nProtocol revision: 2026-10-26-r001.\n# Layout\n{{A1 — First}}";
+test("ordinary template prose and frontmatter render unchanged", () => {
+  const template = "---\nname: sample\ndescription: Ordinary metadata prose.\n---\nIntroductory prose.\n# Layout\n{{A1 — First}}";
   assert.equal(render(template, { "A1 — First": "one" }), template.replace("{{A1 — First}}", "one"));
 });
 

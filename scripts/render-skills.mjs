@@ -7,64 +7,32 @@ export function render(template, catalogue) {
     throw new Error("Catalogue must be an object");
   }
 
-  const keysById = new Map();
+  const ids = new Set();
   for (const [key, body] of Object.entries(catalogue)) {
     const match = keyPattern.exec(key);
     if (!match) throw new Error(`Malformed catalogue key: ${key}`);
     const [, id] = match;
-    if (keysById.has(id)) throw new Error(`Duplicate catalogue ID: ${id}`);
+    if (ids.has(id)) throw new Error(`Duplicate catalogue ID: ${id}`);
     if (typeof body !== "string" || body.trim() === "") {
-      throw new Error(`Empty catalogue value: ${key}`);
+      throw new Error(`Catalogue value must be a nonempty string: ${key}`);
     }
-    keysById.set(id, key);
+    ids.add(id);
   }
 
-  const references = new Map();
+  const keys = Object.keys(catalogue).sort();
+  const references = [];
   const rendered = template.replace(token, (_whole, key) => {
-    const match = keyPattern.exec(key);
-    if (!match) throw new Error(`Malformed template reference: ${key}`);
-    const [, id] = match;
-    const expected = keysById.get(id);
-    if (!expected) throw new Error(`Unknown template reference: ${key}`);
-    if (expected !== key) throw new Error(`Stale template reference: ${key}; expected ${expected}`);
-    references.set(id, (references.get(id) ?? 0) + 1);
+    if (!keyPattern.test(key)) throw new Error(`Malformed template reference: ${key}`);
+    if (!Object.hasOwn(catalogue, key)) {
+      throw new Error(`Unknown or stale template reference: ${key}`);
+    }
+    references.push(key);
     return catalogue[key];
   });
 
   if (/\{\{|\}\}/u.test(rendered)) throw new Error("Malformed or unresolved template token");
-  const scaffold = template.replace(token, "");
-  const lines = scaffold.split(/\r?\n/u);
-  let inFrontmatter = false;
-  let frontmatterClosed = false;
-  for (const [index, line] of lines.entries()) {
-    const trimmed = line.trim();
-    if (index === 0 && trimmed === "---") {
-      inFrontmatter = true;
-      continue;
-    }
-    if (inFrontmatter) {
-      if (trimmed === "---") {
-        inFrontmatter = false;
-        frontmatterClosed = true;
-      }
-      continue;
-    }
-    if (
-      trimmed &&
-      !/^#{1,6} .+$/u.test(trimmed) &&
-      !/^\d+\.\s*$/u.test(trimmed) &&
-      !/^Protocol revision: \d{4}-\d{2}-\d{2}-r\d{3}\.$/u.test(trimmed)
-    ) {
-      throw new Error(`Literal prose outside catalogue values: ${trimmed}`);
-    }
-  }
-  if (inFrontmatter || (lines[0]?.trim() === "---" && !frontmatterClosed)) {
-    throw new Error("Unclosed initial YAML frontmatter");
-  }
-  for (const [id, key] of keysById) {
-    const count = references.get(id) ?? 0;
-    if (count === 0) throw new Error(`Missing template reference: ${key}`);
-    if (count !== 1) throw new Error(`Repeated template reference: ${key}`);
+  if (references.sort().join("\n") !== keys.join("\n")) {
+    throw new Error("Template references must match catalogue keys exactly once");
   }
   return rendered;
 }

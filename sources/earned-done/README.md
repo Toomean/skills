@@ -3,11 +3,11 @@
 Edit the [core catalogue](catalog.mjs) and [routing catalogue](model-routing.catalog.mjs) for
 normative wording. Their paired [core template](skill.template.md) and
 [routing template](model-routing.template.md) hold metadata, headings, ordering, and list layout;
-keep prose in catalogue values. The core template owns frontmatter and the
-`Protocol revision: YYYY-MM-DD-rNNN.` line. Each key is `ID — Meaning`; update its template
-reference in the same change when renaming a key. C/T/W IDs in values are public normative IDs;
-S#/MR# map keys are local authoring labels and never render. Neither local IDs nor key labels
-version the source: Git commits version values and layout together.
+keep prose in catalogue values as a maintainer convention; the renderer does not enforce it. The
+core template owns frontmatter and the `Protocol revision: YYYY-MM-DD-rNNN.` line. Each key is
+`ID — Meaning`; update its template reference in the same change when renaming a key. C/T/W IDs
+in values are public normative IDs; S#/MR# map keys are local authoring labels and never render.
+Neither local IDs nor key labels version the source: Git commits version values and layout together.
 
 Edit source, run `pnpm build:skills`, review the generated Markdown diff, then run
 `pnpm check:skills`. Packing checks freshness before building the CLI; it does not regenerate
