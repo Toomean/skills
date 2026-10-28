@@ -1,11 +1,15 @@
 const keyPattern = /^([A-Z][A-Z0-9]*[0-9]+) — (.+)$/u;
 
+/** Render a trusted JavaScript template against a validated rule catalogue.
+ * Read counts validate template lookups, not emitted content or whether it is unchanged.
+ */
 export function render(template, catalogue) {
   if (typeof template !== "function") throw new Error("Template must be a function");
   if (!catalogue || typeof catalogue !== "object" || Array.isArray(catalogue)) {
     throw new Error("Catalogue must be an object");
   }
 
+  // Rule IDs stay unique even when their readable labels differ.
   const ids = new Set();
   for (const [key, body] of Object.entries(catalogue)) {
     const match = keyPattern.exec(key);
@@ -20,6 +24,7 @@ export function render(template, catalogue) {
 
   const keys = Object.keys(catalogue);
   const references = new Map();
+  // Reject stale keys and count reads so unused or repeated references fail.
   const rules = new Proxy({}, {
     get(_target, key) {
       if (typeof key !== "string" || !Object.hasOwn(catalogue, key)) {

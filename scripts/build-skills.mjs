@@ -7,6 +7,7 @@ import routingTemplate from "../sources/earned-done/model-routing.template.mjs";
 import { render } from "./render-skills.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// Combine YAML rule text with JavaScript layout templates to build committed Markdown.
 const entries = [
   {
     source: "sources/earned-done/catalog.yml",
@@ -25,6 +26,8 @@ if (!["build", "check"].includes(action) || process.argv.length > 3) {
   throw new Error("Usage: node scripts/build-skills.mjs [build|check]");
 }
 
+// Prepare every parsed and rendered document before the first write, catching later invalid input
+// before any output changes. This does not make the subsequent filesystem writes transactional.
 const outputs = await Promise.all(entries.map(async (entry) => {
   const catalogue = parse(await readFile(resolve(root, entry.source), "utf8"));
   return { ...entry, expected: render(entry.render, catalogue) };
@@ -37,6 +40,7 @@ for (const { output, expected } of outputs) {
     process.stdout.write(`built ${output}\n`);
     continue;
   }
+  // Check must expose stale committed docs to CI instead of silently regenerating them.
   let actual;
   try {
     actual = await readFile(outputPath, "utf8");
