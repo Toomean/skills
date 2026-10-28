@@ -16,6 +16,28 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execFileAsync = promisify(execFile);
 const core = parse(await readFile(join(repo, "sources/earned-done/catalog.yml"), "utf8"));
 const routing = parse(await readFile(join(repo, "sources/earned-done/model-routing.catalog.yml"), "utf8"));
+const testWithFixture = test.extend({
+  fixture: async ({}, use) => {
+    await using temp = await mkdtempDisposable(join(tmpdir(), "toomean-keyed-source-"));
+    const fixture = temp.path;
+    await Promise.all(["scripts", "sources", "earned-done"].map((path) =>
+      cp(join(repo, path), join(fixture, path), { recursive: true }),
+    ));
+    const installedYaml = await realpath(dirname(dirname(fileURLToPath(import.meta.resolve("yaml")))));
+    await mkdir(join(fixture, "node_modules"), { recursive: true });
+    await cp(installedYaml, join(fixture, "node_modules/yaml"), { recursive: true });
+    await use(fixture);
+  },
+});
+const outputPaths = [
+  "earned-done/SKILL.md",
+  "earned-done/references/model-routing.md",
+];
+const eachOutput = testWithFixture.for(outputPaths.map((path) => ({ path })));
+const run = (fixture, action) =>
+  execFileAsync("node", ["scripts/build-skills.mjs", action], { cwd: fixture });
+const readOutputs = (fixture) =>
+  Promise.all(outputPaths.map((path) => readFile(join(fixture, path), "utf8")));
 
 test.each([
   ["non-function templates", null, {}, /Template must be a function/u],
@@ -91,81 +113,93 @@ test("committed generated Markdown matches both keyed sources", async () => {
   }
 });
 
-test("build and check controls operate on a temporary copy", async () => {
-  await using temp = await mkdtempDisposable(join(tmpdir(), "toomean-keyed-source-"));
-  const fixture = temp.path;
-  await Promise.all([
-    cp(join(repo, "scripts"), join(fixture, "scripts"), { recursive: true }),
-    cp(join(repo, "sources"), join(fixture, "sources"), { recursive: true }),
-    cp(join(repo, "earned-done"), join(fixture, "earned-done"), { recursive: true }),
-  ]);
-  const installedYaml = await realpath(dirname(dirname(fileURLToPath(import.meta.resolve("yaml")))));
-  await mkdir(join(fixture, "node_modules"), { recursive: true });
-  await cp(installedYaml, join(fixture, "node_modules/yaml"), { recursive: true });
-  const check = () => execFileAsync("node", ["scripts/build-skills.mjs", "check"], { cwd: fixture });
-  const build = () => execFileAsync("node", ["scripts/build-skills.mjs", "build"], { cwd: fixture });
-  const outputPaths = [
-    join(fixture, "earned-done/SKILL.md"),
-    join(fixture, "earned-done/references/model-routing.md"),
-  ];
-  const initial = await Promise.all(outputPaths.map((outputPath) => readFile(outputPath, "utf8")));
+testWithFixture("fresh check leaves generated outputs unchanged", async ({ fixture }) => {
+  const initial = await readOutputs(fixture);
 
-  await check();
-  for (const [index, outputPath] of outputPaths.entries()) {
-    assert.equal(await readFile(outputPath, "utf8"), initial[index], "check must not write");
+  await run(fixture, "check");
+  assert.deepEqual(await readOutputs(fixture), initial);
+});
 
-    await writeFile(outputPath, `${initial[index]}stale\n`);
-    await assert.rejects(check(), /Stale generated output/u);
-    assert.equal(await readFile(outputPath, "utf8"), `${initial[index]}stale\n`);
+eachOutput("build restores stale output: $path", async ({ path }, { fixture }) => {
+  const output = join(fixture, path);
+  const original = await readFile(output, "utf8");
+  await writeFile(output, `${original}stale\n`);
 
-    await build();
-    await check();
-    await rm(outputPath);
-    await assert.rejects(check(), /Missing generated output/u);
-    await build();
-    await check();
-  }
+  await assert.rejects(run(fixture, "check"), /Stale generated output/u);
+  assert.equal(await readFile(output, "utf8"), `${original}stale\n`);
+  await run(fixture, "build");
+  await run(fixture, "check");
+  assert.equal(await readFile(output, "utf8"), original);
+});
 
-  const catalogPath = join(fixture, "sources/earned-done/catalog.yml");
-  const catalogBefore = await readFile(catalogPath, "utf8");
-  const catalogAfter = catalogBefore.replace(
+eachOutput("build recreates missing output: $path", async ({ path }, { fixture }) => {
+  const output = join(fixture, path);
+  const original = await readFile(output, "utf8");
+  await rm(output);
+
+  await assert.rejects(run(fixture, "check"), /Missing generated output/u);
+  await assert.rejects(readFile(output, "utf8"), { code: "ENOENT" });
+  await run(fixture, "build");
+  await run(fixture, "check");
+  assert.equal(await readFile(output, "utf8"), original);
+});
+
+testWithFixture("check propagates output read errors other than missing files", async ({ fixture }) => {
+  const output = join(fixture, outputPaths[0]);
+  await rm(output);
+  await mkdir(output);
+
+  await assert.rejects(run(fixture, "check"), (error) => /EISDIR/u.test(error.stderr));
+});
+
+testWithFixture.for([
+  {
+    name: "catalogue",
+    file: "catalog.yml",
+    before: "This skill is the portable, project-agnostic protocol",
+    after: "This skill is the local, project-agnostic protocol",
+    changedOutput: 0,
+  },
+  {
+    name: "template",
+    file: "model-routing.template.mjs",
+    before: "## Objective order",
+    after: "## Objective order (layout)",
+    changedOutput: 1,
+  },
+])("$name changes only its generated output after build", async (mutation, { fixture }) => {
+  const input = join(fixture, "sources/earned-done", mutation.file);
+  const originalInput = await readFile(input, "utf8");
+  const changedInput = originalInput.replace(mutation.before, mutation.after);
+  assert.notEqual(changedInput, originalInput, `${mutation.name} fixture must match`);
+  await writeFile(input, changedInput);
+
+  const originalOutputs = await readOutputs(fixture);
+  await assert.rejects(run(fixture, "check"), /Stale generated output/u);
+  assert.deepEqual(await readOutputs(fixture), originalOutputs);
+
+  await run(fixture, "build");
+  await run(fixture, "check");
+  const builtOutputs = await readOutputs(fixture);
+  assert.notEqual(builtOutputs[mutation.changedOutput], originalOutputs[mutation.changedOutput]);
+  assert.equal(builtOutputs[1 - mutation.changedOutput], originalOutputs[1 - mutation.changedOutput]);
+});
+
+testWithFixture("invalid second catalogue prevents every build output write", async ({ fixture }) => {
+  const coreCatalogue = join(fixture, "sources/earned-done/catalog.yml");
+  const coreBefore = await readFile(coreCatalogue, "utf8");
+  const coreAfter = coreBefore.replace(
     "This skill is the portable, project-agnostic protocol",
     "This skill is the local, project-agnostic protocol",
   );
-  assert.notEqual(catalogAfter, catalogBefore, "catalogue mutation fixture must match");
+  assert.notEqual(coreAfter, coreBefore, "catalogue fixture must match");
+  await writeFile(coreCatalogue, coreAfter);
 
-  const routingPath = join(fixture, "sources/earned-done/model-routing.catalog.yml");
-  const routingBefore = await readFile(routingPath, "utf8");
-  await writeFile(catalogPath, catalogAfter);
-  await writeFile(routingPath, `${routingBefore}broken: [\n`);
-  const beforeMalformedBuild = await Promise.all(outputPaths.map((outputPath) => readFile(outputPath, "utf8")));
-  await assert.rejects(build());
-  for (const [index, outputPath] of outputPaths.entries()) {
-    assert.equal(await readFile(outputPath, "utf8"), beforeMalformedBuild[index]);
-  }
-  await writeFile(routingPath, routingBefore);
+  const routingCatalogue = join(fixture, "sources/earned-done/model-routing.catalog.yml");
+  const routingBefore = await readFile(routingCatalogue, "utf8");
+  await writeFile(routingCatalogue, `${routingBefore}broken: [\n`);
+  const beforeBuild = await readOutputs(fixture);
 
-  const beforeCatalogBuild = await Promise.all(outputPaths.map((outputPath) => readFile(outputPath, "utf8")));
-  await assert.rejects(check(), /Stale generated output/u);
-  for (const [index, outputPath] of outputPaths.entries()) {
-    assert.equal(await readFile(outputPath, "utf8"), beforeCatalogBuild[index]);
-  }
-  await build();
-  await check();
-  assert.notEqual(await readFile(outputPaths[0], "utf8"), initial[0]);
-  assert.equal(await readFile(outputPaths[1], "utf8"), initial[1]);
-
-  const templatePath = join(fixture, "sources/earned-done/model-routing.template.mjs");
-  const templateBefore = await readFile(templatePath, "utf8");
-  const templateAfter = templateBefore.replace("## Objective order", "## Objective order (layout)");
-  assert.notEqual(templateAfter, templateBefore, "template mutation fixture must match");
-  await writeFile(templatePath, templateAfter);
-  const beforeTemplateBuild = await Promise.all(outputPaths.map((outputPath) => readFile(outputPath, "utf8")));
-  await assert.rejects(check(), /Stale generated output/u);
-  for (const [index, outputPath] of outputPaths.entries()) {
-    assert.equal(await readFile(outputPath, "utf8"), beforeTemplateBuild[index]);
-  }
-  await build();
-  await check();
-  assert.notEqual(await readFile(outputPaths[1], "utf8"), beforeTemplateBuild[1]);
+  await assert.rejects(run(fixture, "build"));
+  assert.deepEqual(await readOutputs(fixture), beforeBuild);
 });
