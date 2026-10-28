@@ -52,4 +52,5 @@ others.
 ## Contributing
 
 Run `pnpm install --frozen-lockfile` and `pnpm check` before proposing changes. See
-[the brainstorm guide](brainstorm/README.md) and the [Apache-2.0 license](LICENSE).
+[the brainstorm guide](brainstorm/README.md), the
+[earned-done source guide](sources/earned-done/README.md), and the [Apache-2.0 license](LICENSE).
