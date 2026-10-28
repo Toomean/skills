@@ -43,6 +43,7 @@
     "publint": "0.3.24",
     "tsdown": "0.22.14",
     "typescript": "7.0.2",
-    "vitest": "5.0.4"
+    "vitest": "5.0.4",
+    "yaml": "2.9.1"
   }
 }
