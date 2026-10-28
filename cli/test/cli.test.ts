@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createServer } from "node:net";
 import {
   lstat,
   mkdir,
@@ -16,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { test } from "vitest";
 
+import { type CliResult } from "../src/contracts.ts";
 import { run } from "../src/cli.ts";
 import { type Destination, InstallationPaths } from "../src/installation-paths.ts";
 
@@ -57,7 +59,7 @@ test("list, help, and usage stay small and text-only", async () => {
     ["list", "earned-done"],
     ["list", "--json"],
     ["unknown"],
-    ["install", "all", "--provider", "codex"],
+    ["install", "all"],
     ["install", "earned-done"],
     ["install", "brainstorm", ".."],
     ["install", "../brainstorm", "--provider", "codex"],
@@ -154,6 +156,195 @@ test.each(skillInstallCases)("all-provider install copies $skill", async ({ skil
       );
     }
   }
+});
+
+test.each([
+  { provider: "codex", selected: ["codex"] },
+  { provider: "all", selected: ["claude", "codex"] },
+] as const)("install all copies every skill in catalog order to $provider", async ({ provider, selected }) => {
+  await using root = await temporaryRoot(`install-all-${provider}`);
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const environment = { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot };
+  const result = await run(["install", "all", "--provider", provider], environment, packageRoot);
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(
+    result.stdout,
+    skillInstallCases.flatMap(({ skill }) => selected.map((selectedProvider) => {
+      const target = join(selectedProvider === "claude" ? claudeRoot : codexRoot, skill);
+      return `INSTALLED\t[${selectedProvider}]\t${skill}\t${target}`;
+    })).join("\n") + "\n",
+  );
+  for (const { skill, files } of skillInstallCases) {
+    for (const selectedProvider of selected) {
+      const target = join(selectedProvider === "claude" ? claudeRoot : codexRoot, skill);
+      for (const file of files) {
+        assert.equal(await readFile(join(target, file), "utf8"), await readFile(join(packageRoot, skill, file), "utf8"));
+      }
+    }
+  }
+});
+
+test("install all dry-run plans every skill without creating roots", async () => {
+  await using root = await temporaryRoot("install-all-dry-run");
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  const result = await run(
+    ["install", "all", "--provider", "all", "--dry-run"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(
+    result.stdout,
+    skillInstallCases.flatMap(({ skill }) => [
+      `PLAN\t[claude]\t${skill}\t${join(claudeRoot, skill)}`,
+      `PLAN\t[codex]\t${skill}\t${join(codexRoot, skill)}`,
+    ]).join("\n") + "\n",
+  );
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+});
+
+test.each(["file", "directory", "broken-symlink"] as const)(
+  "install all refuses the whole batch when a late target is a $kind",
+  async (kind) => {
+    await using root = await temporaryRoot(`install-all-occupied-${kind}`);
+    const claudeRoot = join(root.path, "claude", "skills");
+    const codexRoot = join(root.path, "codex", "skills");
+    const target = join(codexRoot, "mental-map");
+    await mkdir(codexRoot, { recursive: true });
+    if (kind === "file") await writeFile(target, "foreign file\n");
+    if (kind === "directory") {
+      await mkdir(target);
+      await writeFile(join(target, "foreign.txt"), "foreign directory\n");
+    }
+    if (kind === "broken-symlink") await symlink(join(root.path, "missing"), target, "file");
+
+    const result = await run(
+      ["install", "all", "--provider", "all"],
+      { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+      packageRoot,
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(
+      result.stdout,
+      skillInstallCases.flatMap(({ skill }) => [
+        `PLAN\t[claude]\t${skill}\t${join(claudeRoot, skill)}`,
+        `${skill === "mental-map" ? "REFUSE" : "PLAN"}\t[codex]\t${skill}\t${join(codexRoot, skill)}`,
+      ]).join("\n") + "\n",
+    );
+    await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+    await assert.rejects(lstat(join(codexRoot, "earned-done")), { code: "ENOENT" });
+    if (kind === "file") assert.equal(await readFile(target, "utf8"), "foreign file\n");
+    if (kind === "directory") assert.equal(await readFile(join(target, "foreign.txt"), "utf8"), "foreign directory\n");
+    if (kind === "broken-symlink") assert.equal(await readlink(target), join(root.path, "missing"));
+  },
+);
+
+test("install all validates every packaged source before creating roots", async () => {
+  await using root = await temporaryRoot("install-all-invalid-source");
+  const fixturePackage = join(root.path, "fixture");
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  for (const skill of ["earned-done", "brainstorm"]) {
+    const skillRoot = join(fixturePackage, skill);
+    await mkdir(skillRoot, { recursive: true });
+    await writeFile(join(skillRoot, "SKILL.md"), "fixture\n");
+  }
+
+  const result = await run(
+    ["install", "all", "--provider", "all"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    fixturePackage,
+  );
+
+  assert.equal(result.exitCode, 4);
+  assert.equal(result.stderr, "ERROR: invalid packaged skill: mental-map\n");
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
+});
+
+test("install all rejects cross-skill destination overlap and source containment", async () => {
+  await using overlapRoot = await temporaryRoot("install-all-overlap");
+  const claudeRoot = join(overlapRoot.path, "shared");
+  const codexRoot = join(claudeRoot, "earned-done");
+  const overlap = await run(
+    ["install", "all", "--provider", "all", "--dry-run"],
+    { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+    packageRoot,
+  );
+  assert.equal(overlap.exitCode, 1);
+  assert.match(overlap.stderr, /provider targets must not overlap/);
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+
+  await using containmentRoot = await temporaryRoot("install-all-containment");
+  const fixturePackage = join(containmentRoot.path, "fixture");
+  for (const { skill } of skillInstallCases) {
+    const skillRoot = join(fixturePackage, skill);
+    await mkdir(skillRoot, { recursive: true });
+    await writeFile(join(skillRoot, "SKILL.md"), "fixture\n");
+  }
+  const nestedOutputRoot = join(fixturePackage, "brainstorm", "nested");
+  const contained = await run(
+    ["install", "all", "--provider", "codex", "--dry-run"],
+    {
+      CLAUDE_SKILLS_DIR: join(containmentRoot.path, "claude", "skills"),
+      CODEX_SKILLS_DIR: nestedOutputRoot,
+    },
+    fixturePackage,
+  );
+  assert.equal(contained.exitCode, 1);
+  assert.match(contained.stderr, /provider target must be outside the packaged skill source/);
+  await assert.rejects(lstat(join(containmentRoot.path, "claude")), { code: "ENOENT" });
+  await assert.rejects(lstat(nestedOutputRoot), { code: "ENOENT" });
+});
+
+test("install all reports completed copies and a possibly partial later destination", async () => {
+  await using root = await temporaryRoot("install-all-partial");
+  const fixturePackage = join(root.path, "fixture");
+  const claudeRoot = join(root.path, "claude", "skills");
+  const codexRoot = join(root.path, "codex", "skills");
+  for (const { skill } of skillInstallCases) {
+    const skillRoot = join(fixturePackage, skill);
+    await mkdir(skillRoot, { recursive: true });
+    await writeFile(join(skillRoot, "SKILL.md"), "fixture\n");
+  }
+  const socketPath = join(fixturePackage, "mental-map", "un-copyable-socket");
+  const socketServer = createServer();
+  socketServer.listen(socketPath);
+  await new Promise<void>((resolveListening, reject) => {
+    socketServer.once("listening", resolveListening);
+    socketServer.once("error", reject);
+  });
+
+  let result: CliResult;
+  try {
+    result = await run(
+      ["install", "all", "--provider", "all"],
+      { CLAUDE_SKILLS_DIR: claudeRoot, CODEX_SKILLS_DIR: codexRoot },
+      fixturePackage,
+    );
+  } finally {
+    await new Promise<void>((resolveClosing, reject) => socketServer.close((error) => error ? reject(error) : resolveClosing()));
+  }
+
+  assert.equal(result.exitCode, 4);
+  assert.equal(
+    result.stdout,
+    ["earned-done", "brainstorm"].flatMap((skill) => [
+      `INSTALLED\t[claude]\t${skill}\t${join(claudeRoot, skill)}`,
+      `INSTALLED\t[codex]\t${skill}\t${join(codexRoot, skill)}`,
+    ]).join("\n") + "\n",
+  );
+  assert.match(result.stderr, /^ERROR: install failed for \[claude\] mental-map /);
+  assert.match(result.stderr, /may now be partial; completed installs were not removed\./);
+  await lstat(join(claudeRoot, "earned-done", "SKILL.md"));
+  await lstat(join(codexRoot, "brainstorm", "SKILL.md"));
+  assert.doesNotMatch(result.stdout, /mental-map/);
 });
 
 test.each(skillInstallCases)("all-provider preflight preserves the occupied $skill target", async ({ skill }) => {

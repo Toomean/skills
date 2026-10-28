@@ -46,7 +46,7 @@ export class InstallationPaths {
     });
   }
 
-  /** Rejects any equal or nested target pair so a multi-provider install cannot write inside another target. */
+  /** Rejects any equal or nested target pair so a batch cannot write inside another target. */
   assertNoTargetOverlap(destinations: readonly Destination[]): void {
     for (const [index, first] of destinations.entries()) {
       for (const second of destinations.slice(index + 1)) {

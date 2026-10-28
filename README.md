@@ -11,23 +11,26 @@ provider works on its own.
 
 ## Install with npm
 
-With [Node.js 22.12.0 or newer](https://nodejs.org/), install one skill for one provider:
+With [Node.js 22.12.0 or newer](https://nodejs.org/), install one skill or the full catalog:
 
 ```sh
 npx @toomean/skills@next install earned-done --provider codex
+npx @toomean/skills@next install all --provider codex
+npx @toomean/skills@next install all --provider all --dry-run
 ```
 
-Choose `earned-done`, `brainstorm`, or `mental-map`; use `claude` or `codex` as the provider.
-`--provider all` installs the selected skill to both providers; `--dry-run` checks destinations
-without writing.
+Choose `earned-done`, `brainstorm`, or `mental-map` to select one skill, or `all` to select the
+catalog in its listed order. Separately, `--provider claude`, `--provider codex`, or
+`--provider all` selects where those skills go; provider `all` means both providers. `--dry-run`
+checks every selected destination without writing.
 `CODEX_SKILLS_DIR` and `CLAUDE_SKILLS_DIR` override the defaults
 `~/.agents/skills` and `~/.claude/skills` respectively, for example:
 `CODEX_SKILLS_DIR="$HOME/my-skills" npx @toomean/skills@next install brainstorm --provider codex`.
 
-The npm installer copies the selected skill and never replaces an existing destination, including
-a file, directory, or broken symlink. Unexpected copy failures can leave a newly created root, a
-partial destination, or a completed first copy when installing to both providers; it does not
-remove files to repair a failure. There is no force, update, or uninstall command.
+The npm installer never replaces an existing destination, including a file, directory, or broken
+symlink. `install all` refuses the entire batch if any selected destination is occupied. Unexpected
+copy failures can leave a newly created root, a partial destination, or completed earlier copies;
+it does not remove files to repair a failure. There is no force, update, or uninstall command.
 
 ## Install from Git
 

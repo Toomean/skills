@@ -13,8 +13,13 @@ import {
 const USAGE = [
   "usage:",
   "  toomean-skills list",
-  `  toomean-skills install ${SKILLS.join("|")} --provider claude|codex|all [--dry-run]`,
+  `  toomean-skills install ${[...SKILLS, "all"].join("|")} --provider claude|codex|all [--dry-run]`,
 ].join("\n");
+
+interface InstallPlan extends Destination {
+  readonly skill: Skill;
+  readonly source: string;
+}
 
 /**
  * Executes catalog and installation commands while returning output instead of writing to process streams.
@@ -62,8 +67,8 @@ class Cli {
   }
 
   /**
-   * Plans or copies the packaged skill into the selected provider roots without replacing targets.
-   * Multi-provider copies are sequential and preserve completed destinations if a later copy fails.
+   * Plans or copies selected packaged skills into provider roots without replacing targets.
+   * Batch copies are sequential and preserve completed destinations if a later copy fails.
    */
   private async runInstall(argv: readonly string[]): Promise<CliResult> {
     const { positionals, values } = this.parseCliArgs(argv, {
@@ -72,15 +77,27 @@ class Cli {
       help: { type: "boolean", short: "h" },
     });
     if (values.help === true) return this.usage();
-    if (positionals.length !== 1 || !SKILLS.includes(positionals[0] as Skill)) {
-      throw new CliFailure(EXIT_CODES.usage, `install requires exactly one supported skill: ${SKILLS.join(" or ")}`);
+    if (positionals.length !== 1 || (positionals[0] !== "all" && !SKILLS.includes(positionals[0] as Skill))) {
+      throw new CliFailure(EXIT_CODES.usage, `install requires exactly one supported skill or all: ${SKILLS.join(" or ")}`);
     }
-    const skill = positionals[0] as Skill;
+    const allSkills = positionals[0] === "all";
+    const skills = allSkills ? SKILLS : [positionals[0] as Skill];
+    const providers = this.selectedProviders(values.provider);
+    const destinationsBySkill = skills.map((skill) => ({ skill, destinations: this.paths.destinations(providers, skill) }));
+    const rawDestinations = destinationsBySkill.flatMap(({ destinations }) => destinations);
+    this.paths.assertNoTargetOverlap(rawDestinations);
 
-    const destinations = this.paths.destinations(this.selectedProviders(values.provider), skill);
-    this.paths.assertNoTargetOverlap(destinations);
-    const source = await this.paths.packagedSkillRoot(skill);
-    this.paths.assertOutsideSource(source, destinations);
+    const skillPlans: Array<{ readonly skill: Skill; readonly source: string; readonly destinations: readonly Destination[] }> = [];
+    for (const { skill, destinations: skillDestinations } of destinationsBySkill) {
+      const source = await this.paths.packagedSkillRoot(skill);
+      skillPlans.push({ skill, source, destinations: skillDestinations });
+    }
+    for (const { source } of skillPlans) this.paths.assertOutsideSource(source, rawDestinations);
+
+    const destinations: InstallPlan[] = [];
+    for (const { skill, source, destinations: skillDestinations } of skillPlans) {
+      for (const destination of skillDestinations) destinations.push({ ...destination, skill, source });
+    }
 
     const occupied = new Set<string>();
     for (const { target } of destinations) {
@@ -88,22 +105,22 @@ class Cli {
     }
     if (occupied.size > 0) {
       const stdout = `${destinations
-        .map(({ provider, target }) => `${occupied.has(target) ? "REFUSE" : "PLAN"}\t[${provider}]\t${skill}\t${target}`)
+        .map(({ provider, skill, target }) => `${occupied.has(target) ? "REFUSE" : "PLAN"}\t[${provider}]\t${skill}\t${target}`)
         .join("\n")}\n`;
       return { exitCode: EXIT_CODES.refused, stderr: "", stdout };
     }
 
     if (values["dry-run"] === true) {
-      return { exitCode: EXIT_CODES.success, stderr: "", stdout: this.formatDestinations("PLAN", destinations, skill) };
+      return { exitCode: EXIT_CODES.success, stderr: "", stdout: this.formatPlan("PLAN", destinations) };
     }
 
-    const installed: Destination[] = [];
+    const installed: InstallPlan[] = [];
     for (const destination of destinations) {
       try {
         await mkdir(destination.root, { recursive: true });
         // This is a second no-clobber check after the racy preflight on the supported runtime;
         // recursive cp remains non-transactional.
-        await cp(source, destination.target, {
+        await cp(destination.source, destination.target, {
           recursive: true,
           force: false,
           errorOnExist: true,
@@ -113,9 +130,10 @@ class Cli {
       } catch (error) {
         return {
           exitCode: EXIT_CODES.internal,
-          stdout: this.formatDestinations("INSTALLED", installed, skill),
+          stdout: this.formatPlan("INSTALLED", installed),
           stderr:
-            `ERROR: install failed for [${destination.provider}] ${destination.target}: ${errorMessage(error)}. ` +
+            `ERROR: install failed for [${destination.provider}]${allSkills ? ` ${destination.skill}` : ""} ${destination.target}: ` +
+            `${errorMessage(error)}. ` +
             "The destination root or target may now be partial; completed installs were not removed.\n",
         };
       }
@@ -124,7 +142,7 @@ class Cli {
     return {
       exitCode: EXIT_CODES.success,
       stderr: "",
-      stdout: this.formatDestinations("INSTALLED", installed, skill),
+      stdout: this.formatPlan("INSTALLED", destinations),
     };
   }
 
@@ -133,10 +151,10 @@ class Cli {
     return { exitCode: EXIT_CODES.success, stderr: "", stdout: `${USAGE}\n` };
   }
 
-  /** Formats destination outcomes as stable, line-oriented CLI records. */
-  private formatDestinations(action: "INSTALLED" | "PLAN", destinations: readonly Destination[], skill: Skill): string {
+  /** Formats outcomes for one or more skills while keeping the existing single-skill record shape. */
+  private formatPlan(action: "INSTALLED" | "PLAN", destinations: readonly InstallPlan[]): string {
     if (destinations.length === 0) return "";
-    return `${destinations.map(({ provider, target }) => `${action}\t[${provider}]\t${skill}\t${target}`).join("\n")}\n`;
+    return `${destinations.map(({ provider, target, skill }) => `${action}\t[${provider}]\t${skill}\t${target}`).join("\n")}\n`;
   }
 
   /** Validates one provider name or expands the explicit all-provider selection. */
