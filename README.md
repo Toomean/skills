@@ -28,9 +28,27 @@ checks every selected destination without writing.
 `CODEX_SKILLS_DIR="$HOME/my-skills" npx @toomean/skills@next install brainstorm --provider codex`.
 
 The npm installer never replaces an existing destination, including a file, directory, or broken
-symlink. `install all` refuses the entire batch if any selected destination is occupied. Unexpected
-copy failures can leave a newly created root, a partial destination, or completed earlier copies;
-it does not remove files to repair a failure. There is no force, update, or uninstall command.
+symlink. `install all` refuses the entire batch if any selected destination is occupied. It writes
+a receipt outside the skills root after verifying each copy. Unexpected copy or receipt failures
+can leave a partial or unclaimed destination and completed earlier copies; nothing is removed to
+repair a failure.
+
+To inspect or update one copied skill from the invoked package (without fetching a newer package):
+
+```sh
+npx @toomean/skills@next update earned-done --provider codex --dry-run
+npx @toomean/skills@next update earned-done --provider codex
+npx @toomean/skills@next update earned-done --provider codex --replace
+```
+
+An unchanged receipt-backed copy updates without a prompt; local edits or a receipt-less directory
+refuse unless `--replace` receives an interactive `yes` for the displayed whole-tree delta. Invalid
+receipts, links, and non-directory targets always refuse. `--dry-run` writes nothing. Updates retain
+the old tree and, when present, its old receipt in a sibling state directory outside the skills
+root; inspect the reported paths if a partial failure leaves a recovery lock. Retained copies are
+not automatically cleaned. Receipts track paths, types and file content, not chmod or mtime. There is no merge,
+unattended force, or uninstall command. Pin the package version if you need a reproducible preview
+and apply.
 
 ## Install from Git
 

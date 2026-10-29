@@ -2,6 +2,7 @@
 
 import { realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 
 import { run } from "./cli.ts";
@@ -19,7 +20,12 @@ function isDirectEntry(entryPath: string | undefined): boolean {
 }
 
 async function main(): Promise<void> {
-  const result = await run(process.argv.slice(2), process.env, resolve(dirname(canonicalModulePath), ".."));
+  const result = await run(process.argv.slice(2), process.env, resolve(dirname(canonicalModulePath), ".."), async (prompt) => {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
+    const reader = createInterface({ input: process.stdin, output: process.stdout });
+    try { return (await reader.question(prompt)).trim() === "yes"; }
+    finally { reader.close(); }
+  });
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   process.exitCode = result.exitCode;

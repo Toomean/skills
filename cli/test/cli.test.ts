@@ -17,7 +17,6 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { test } from "vitest";
 
-import { type CliResult } from "../src/contracts.ts";
 import { run } from "../src/cli.ts";
 import { type Destination, InstallationPaths } from "../src/installation-paths.ts";
 
@@ -303,7 +302,7 @@ test("install all rejects cross-skill destination overlap and source containment
   await assert.rejects(lstat(nestedOutputRoot), { code: "ENOENT" });
 });
 
-test("install all reports completed copies and a possibly partial later destination", async () => {
+test("install all refuses a special source entry before copying any selected skill", async () => {
   await using root = await temporaryRoot("install-all-partial");
   const fixturePackage = join(root.path, "fixture");
   const claudeRoot = join(root.path, "claude", "skills");
@@ -321,7 +320,7 @@ test("install all reports completed copies and a possibly partial later destinat
     socketServer.once("error", reject);
   });
 
-  let result: CliResult;
+  let result;
   try {
     result = await run(
       ["install", "all", "--provider", "all"],
@@ -332,19 +331,11 @@ test("install all reports completed copies and a possibly partial later destinat
     await new Promise<void>((resolveClosing, reject) => socketServer.close((error) => error ? reject(error) : resolveClosing()));
   }
 
-  assert.equal(result.exitCode, 4);
-  assert.equal(
-    result.stdout,
-    ["earned-done", "brainstorm"].flatMap((skill) => [
-      `INSTALLED\t[claude]\t${skill}\t${join(claudeRoot, skill)}`,
-      `INSTALLED\t[codex]\t${skill}\t${join(codexRoot, skill)}`,
-    ]).join("\n") + "\n",
-  );
-  assert.match(result.stderr, /^ERROR: install failed for \[claude\] mental-map /);
-  assert.match(result.stderr, /may now be partial; completed installs were not removed\./);
-  await lstat(join(claudeRoot, "earned-done", "SKILL.md"));
-  await lstat(join(codexRoot, "brainstorm", "SKILL.md"));
-  assert.doesNotMatch(result.stdout, /mental-map/);
+  assert.equal(result.exitCode, 1);
+  assert.match(result.stderr, /link or special entry: un-copyable-socket/);
+  assert.equal(result.stdout, "");
+  await assert.rejects(lstat(claudeRoot), { code: "ENOENT" });
+  await assert.rejects(lstat(codexRoot), { code: "ENOENT" });
 });
 
 test.each(skillInstallCases)("all-provider preflight preserves the occupied $skill target", async ({ skill }) => {
