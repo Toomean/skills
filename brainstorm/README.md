@@ -18,8 +18,8 @@ in [`SKILL.md`](SKILL.md).
 ## Install
 
 `brainstorm` is available through the [public installation guide](https://github.com/Toomean/skills#install)
-for Vercel Skills, npm, and Git-checkout options. It can be used on its own; `earned-done` is an
-optional complement.
+for Vercel Skills or manual copying. It can be used on its own; `earned-done` is an optional
+complement.
 
 ## Using it
 
