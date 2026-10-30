@@ -17,9 +17,9 @@ in [`SKILL.md`](SKILL.md).
 
 ## Install
 
-`brainstorm` is included in `@toomean/skills`. See the [public installation guide](https://github.com/Toomean/skills#install-with-npm)
-for npm and Git-checkout options. The package also includes `earned-done` as an optional complement;
-brainstorm works on its own.
+`brainstorm` is available through the [public installation guide](https://github.com/Toomean/skills#install)
+for Vercel Skills, npm, and Git-checkout options. It can be used on its own; `earned-done` is an
+optional complement.
 
 ## Using it
 
