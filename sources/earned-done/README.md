@@ -17,9 +17,8 @@ blank lines; do not use folded `>` blocks for prose. Markdown backticks, literal
 backslashes need no template-literal escaping. Core T/W rule bodies omit only the outer numbered-list
 hanging indent; the core template supplies that layout.
 
-Edit source, run `pnpm build:skills`, review the generated Markdown diff, then run
-`pnpm check:skills`. Packing checks freshness before building the CLI; it does not regenerate
-skill Markdown. Commit both source and generated output. The authoring sources and scripts are not
-in the npm allowlist; public build and check use the maintainer-only `yaml` development dependency
-to parse authoring sources. Installed skill directories are unchanged, and the CLI has no YAML
-runtime dependency. Public build and check require no private evidence or Git history.
+Edit source, run `pnpm build:skills`, review the generated Markdown diff, then run `pnpm check`.
+Commit both source and generated output. The committed skill directories are copied as-is by users;
+the catalogues, templates, and scripts are maintainer tooling only. Build and check use the
+maintainer-only `yaml` development dependency to parse authoring sources and require no private
+evidence or Git history.
