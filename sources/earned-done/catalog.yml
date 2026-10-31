@@ -69,14 +69,23 @@
   returns findings or a verdict; an **investigator** collects facts for another role and does not
   issue a verdict.
 
+  Give each delegate a bounded brief with role, assignment and scope, expected output, original
+  intent, accepted decisions and requirements, relevant input artifact/base revision, and evidence
+  entry points. Reviewers do not automatically inherit the full implementation dialogue; they receive
+  the frozen artifact under [W3](#per-task-workflow) and a primary question as search emphasis,
+  not a limit on findings. Treat author conclusions as claims, not premises. A fresh conversation
+  alone guarantees neither independent judgment nor filesystem isolation. If the harness cannot
+  provide the requested separation, disclose it and use the existing degraded route; do not block
+  completion on setup.
+
   **Optional different-family reviewer.** When a substantive task already has a planned read-only
   reviewer slot, fill one such slot with another model family only when the current harness natively
   exposes that subagent and already authorizes it for this project and task. Never add a reviewer, wave,
   or fan-out solely for family diversity. The harness owns invocation, account selection, billing, and
-  data access; this protocol does not discover providers, configure routes, or probe credentials. Give
-  the reviewer a frozen artifact, one independent question, and an evidence request. If that native
-  capability is absent or unavailable, fill the same slot from a fresh, separated context in the current
-  provider without prompting for setup. Its absence alone is not a degradation to report, and this
+  data access; this protocol does not discover providers, configure routes, or probe credentials. If
+  that native capability is absent or unavailable, use a fresh, separated context in the current
+  provider when available. Another family's absence alone is not a degradation; if no separated
+  context is available, disclose the degraded route and proceed without prompting for setup. This
   optional lane never blocks completion.
 
   A finding from outside the current provider is an untrusted candidate, not a verdict. Bind it to the
