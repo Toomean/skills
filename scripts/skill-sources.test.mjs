@@ -163,8 +163,8 @@ testWithFixture.for([
   {
     name: "template",
     file: "model-routing.template.mjs",
-    before: "## Objective order",
-    after: "## Objective order (layout)",
+    before: "# Outcome-first model routing",
+    after: "# Outcome-first model routing (layout)",
     changedOutput: 1,
   },
 ])("$name changes only its generated output after build", async (mutation, { fixture }) => {
