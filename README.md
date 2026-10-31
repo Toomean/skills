@@ -67,3 +67,5 @@ others.
 Run `pnpm install --frozen-lockfile` and `pnpm check` before proposing changes. See
 [the brainstorm guide](brainstorm/README.md), the
 [earned-done source guide](sources/earned-done/README.md), and the [Apache-2.0 license](LICENSE).
+Maintainer tooling requires Node.js 24.18.0 or newer; skill users only need their agent runtime and
+one of the installation methods above.
