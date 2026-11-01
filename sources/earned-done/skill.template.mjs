@@ -30,6 +30,10 @@ ${rules["C1 — Empirical verification before claim"]}
 
 ${rules["C2 — Preserve independent roles and delegate when available"]}
 
+### Delegate context and independence
+
+${rules["S16 — Delegate context and independence"]}
+
 ## Recurring failure modes — guard against
 
 ${rules["S3 — Trap scope and routing"]}

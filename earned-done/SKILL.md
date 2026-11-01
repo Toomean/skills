@@ -79,15 +79,6 @@ and synthesizes; an **implementer** authors the change; a **reviewer** challenge
 returns findings or a verdict; an **investigator** collects facts for another role and does not
 issue a verdict.
 
-Give each delegate a bounded brief with role, assignment and scope, expected output, original
-intent, accepted decisions and requirements, relevant input artifact/base revision, and evidence
-entry points. Reviewers do not automatically inherit the full implementation dialogue; they receive
-the frozen artifact under [W3](#per-task-workflow) and a primary question as search emphasis,
-not a limit on findings. Treat author conclusions as claims, not premises. A fresh conversation
-alone guarantees neither independent judgment nor filesystem isolation. If the harness cannot
-provide the requested separation, disclose it and use the existing degraded route; do not block
-completion on setup.
-
 **Optional different-family reviewer.** When a substantive task already has a planned read-only
 reviewer slot, fill one such slot with another model family only when the current harness natively
 exposes that subagent and already authorizes it for this project and task. Never add a reviewer, wave,
@@ -129,6 +120,19 @@ Research/review delegates do not spawn delegates unless the plan says so.
 
 **Mark prompt premises.** `Verified` means observed or source-checked, never merely believed; label
 everything else `unverified`. A delegate re-checks it before building on it; a prompt is not evidence.
+
+### Delegate context and independence
+
+Give each delegate a bounded brief with role, assignment and scope, expected output, original
+intent, accepted decisions and requirements, relevant artifact or base revision, and evidence
+entry points. Independent reviewers and validators need context separate from the author, not the
+full author dialogue by default; a fresh context is not an empty one. Reviewers receive the frozen
+artifact under [W3](#per-task-workflow), with a primary question as search emphasis, never a limit
+on findings. Bounded author fixes may reuse author context, but independent checking stays
+independent. Treat author conclusions as claims to challenge, not premises, including the
+preliminary conclusion supplied under the [validator rule](#independent-validator-rule). A fresh
+conversation guarantees neither independent judgment nor filesystem isolation. If requested
+separation is unavailable, disclose it and use the existing degraded route; do not block on setup.
 
 ## Recurring failure modes — guard against
 
