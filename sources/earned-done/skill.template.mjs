@@ -34,6 +34,25 @@ ${rules["C2 — Preserve independent roles and delegate when available"]}
 
 ${rules["S16 — Delegate context and independence"]}
 
+## Per-task workflow
+
+${rules["S5 — Workflow scope"]}
+
+${numberedListItem(1, rules["W1 — Plan agreement first"])}
+${numberedListItem(2, rules["W2 — Implementer role"])}
+${numberedListItem(3, rules["W3 — Two reviewer contexts"])}
+${numberedListItem(4, rules["W4 — Synthesize reviews"])}
+${numberedListItem(5, rules["W5 — Empirical verification"])}
+${numberedListItem(6, rules["W6 — End-of-step sweep"])}
+${numberedListItem(7, rules["W7 — Commit"])}
+${numberedListItem(8, rules["W8 — Independent commit review"])}
+
+${rules["S6 — Implementation handoff"]}
+
+## Degraded modes — shedding order under budget/context pressure
+
+${rules["S7 — Degraded modes"]}
+
 ## Recurring failure modes — guard against
 
 ${rules["S3 — Trap scope and routing"]}
@@ -61,25 +80,6 @@ ${numberedListItem(13, rules["T13 — Validate declarative artifacts natively"])
 ${numberedListItem(14, rules["T14 — Test a live deny chokepoint"])}
 ${numberedListItem(15, rules["T15 — Reproduce under relevant runtime layers"])}
 ${numberedListItem(16, rules["T16 — Audit the probe harness itself"])}
-
-## Per-task workflow
-
-${rules["S5 — Workflow scope"]}
-
-${numberedListItem(1, rules["W1 — Plan agreement first"])}
-${numberedListItem(2, rules["W2 — Implementer role"])}
-${numberedListItem(3, rules["W3 — Two reviewer contexts"])}
-${numberedListItem(4, rules["W4 — Synthesize reviews"])}
-${numberedListItem(5, rules["W5 — Empirical verification"])}
-${numberedListItem(6, rules["W6 — End-of-step sweep"])}
-${numberedListItem(7, rules["W7 — Commit"])}
-${numberedListItem(8, rules["W8 — Independent commit review"])}
-
-${rules["S6 — Implementation handoff"]}
-
-## Degraded modes — shedding order under budget/context pressure
-
-${rules["S7 — Degraded modes"]}
 
 ## Code review — see [CodeReview](CodeReview.md)
 
