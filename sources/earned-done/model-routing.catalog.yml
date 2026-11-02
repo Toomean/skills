@@ -1,84 +1,79 @@
 # ID — descriptive label keys; bodies are normative Markdown.
 "MR1 — Routing scope": |-
-  Read this at [W1](../SKILL.md#per-task-workflow) when a substantive task can use multiple models,
-  agents, expensive waves, or a shared provider pool. Model names and invocation mechanics belong
-  in the selected provider adapter.
+  Use this at [W1](../SKILL.md#per-task-workflow) when substantive work can use multiple models,
+  agents, expensive waves, or a shared provider pool. Model names and invocation details belong in
+  the selected provider adapter.
 "MR2 — Completion and cost objective": |-
-  Route in this order, not by a guessed weighted score:
+  Optimize in this order:
 
-  1. Maximize the chance of accepted completion with required quality, independence, security,
-     and empirical evidence as hard gates; reserve capacity to close them.
+  1. Prefer the route most likely to finish with required quality, independence, security, and
+     evidence. Treat these as gates and reserve capacity to meet them.
   2. Among credible routes, minimize expected total cost to acceptance.
-  3. Use wall time only as the last tie-breaker unless the owner sets a deadline.
+  3. Use wall time as the last tie-breaker unless the owner sets a deadline.
 
-  Count failed starts, repeated orientation, fix waves, review, and controller cleanup. Do not sum
-  token counts across providers as if their tokens, caches, quotas, and prices were comparable.
-  Keep provider-native usage ledgers and one task-level cap on expensive waves. If usage is hidden,
-  honor the cap rather than inventing precision.
+  Count failed starts, repeated orientation, fixes, review, and controller cleanup. Keep separate
+  provider-native usage ledgers; do not add token counts as though tokens, caches, quotas, or prices
+  were interchangeable. Set one task-level cap on expensive waves. If usage is hidden, honor the cap
+  without guessing.
 "MR3 — Sole controller": |-
-  The open-session agent remains the single accountable controller and facilitator. Routing never
-  transfers final synthesis, fan-out control, or completion authority to a delegate or advisor,
-  or creates a second controller mid-task. If another entry model would have fit better, record
-  that for the next slice.
+  The open-session agent remains the sole accountable controller. Delegates and advisors do not take
+  over synthesis, fan-out, or completion authority, and routing does not create a second controller.
+  If another entry model would fit better, record it for the next slice.
 "MR4 — Complete provider route and roles": |-
-  First resolve a complete route within the selected provider. [C2](../SKILL.md#core-rule-c2-preserve-independent-roles-delegate-when-available)
-  and [W3](../SKILL.md#per-task-workflow) own the controller, implementer, default reviewer count,
-  required risk lenses, independence, and the narrow reason to add a context; a new role label
-  alone buys no reviewer or wave.
-
-  Use a natively exposed, already-authorized different-family reviewer only in an existing
-  read-only slot. Never add a reviewer, wave, or fan-out solely for family diversity or make it a
-  completion dependency; do not discover providers to manufacture the route. If delegation is
-  unavailable, use C2's temporally separated main-agent floor and name the degraded independence.
+  First plan a complete route within the selected provider. [C2](../SKILL.md#core-rule-c2-preserve-independent-roles-delegate-when-available)
+  and [W3](../SKILL.md#per-task-workflow) define roles, reviewer count, risk lenses, independence,
+  authorization, and fallback. Follow their limits on optional different-family reviewers and
+  adding contexts; a role label alone is not a reason to add one.
 "MR5 — Pre-route evidence and resource check": |-
-  Have the controller check task shape (bounded,
-  mechanical/high-volume, runtime, architecture, or high-risk security/concurrency/measurement);
-  specification (exact acceptance gate or unresolved product/architecture ambiguity); evidence
-  (frozen diff, runtime claim, affected test selector, review evidence mode); resources (available
-  models, provider pool and completion reserve, durable checkpoint); and previous outcome
-  (delivered, product/test failure, model-quality failure, or infrastructure).
+  Before routing, the controller checks:
+
+  - Task shape: bounded, mechanical/high-volume, runtime, architecture, or high-risk
+    security/concurrency/measurement.
+  - Specification: exact acceptance gate or unresolved product/architecture ambiguity.
+  - Evidence: frozen diff, runtime claim, affected test selector, and review evidence mode.
+  - Resources: available models, provider pool, completion reserve, and durable checkpoint.
+  - Previous outcome: delivered, product/test failure, model-quality failure, or infrastructure.
 "MR6 — Route by task fit": |-
-  Give exact bounded work to the provider's efficient implementer with a finite pass cap. Route
-  ambiguity and architecture to stronger reasoning or advice before more code. Reserve an empirical
-  slot for runtime and high-risk claims: cost pressure does not turn an open behavior claim into a
-  verdict. Use efficient models for mechanical volume only with explicit scope and
-  content-preservation gates.
+  Give exact, bounded work to an efficient implementer with a finite pass cap. Send ambiguity and
+  architecture to stronger reasoning or advice before writing more code. Reserve an empirical slot
+  for runtime and high-risk claims; cost pressure cannot close an open behavior question. Use
+  efficient models for mechanical volume only with explicit scope and content-preservation gates.
 "MR7 — Failed-wave branches": |-
-  Classify each wave before spending another:
+  After each wave, classify the outcome before routing more work:
 
-  - `CAPACITY/AUTH/TOOL/INFRA` — preserve partial artifacts, repair or change the execution route;
-    do not consume the model-quality fix pass.
-  - `SPEC_AMBIGUITY` — stop implementation, split or deliberate, and ask the owner only when the
-    sources do not settle the decision.
-  - `QUALITY_FAILURE` — allow the adapter's one bounded fix, then split or promote rather than retry.
-  - `PRODUCT/TEST_FAILURE` — route observed evidence to a bounded fix and re-review.
-  - `DELIVERED` — continue to the reserved independent review, empirics, and closure gates.
+  - `CAPACITY/AUTH/TOOL/INFRA` — preserve partial work and repair or change the execution route;
+    do not spend the model-quality fix pass.
+  - `SPEC_AMBIGUITY` — stop implementation and split or deliberate. Ask the owner only if sources
+    do not settle the decision.
+  - `QUALITY_FAILURE` — allow one bounded fix, then split the task or promote to a stronger route;
+    do not retry on the same route.
+  - `PRODUCT/TEST_FAILURE` — use observed evidence for a bounded fix, then re-review.
+  - `DELIVERED` — continue to reserved independent review, empirical checks, and closure.
 "MR8 — Optional classifier threshold": |-
-  Apply the controller's pre-route check in question 2 directly. Use a separate cheap classifier
-  only if a consequential routing ambiguity remains and the task is large enough to repay another
-  context. It may propose a routing note; it never routes itself.
+  Use the controller's pre-route check directly. Add a cheap classifier only if consequential
+  routing ambiguity remains and the task is large enough to repay the added context cost. It may
+  suggest a routing note; the controller decides.
 "MR9 — Shared-pool cap and checkpoint": |-
-  Run at most one heavy context at a time per genuinely shared provider pool. While a delegate
-  is heavy, keep the controller on lightweight coordination and checkpointing. Before each
-  expensive wave, refresh observable usage and write a durable, user-authorized checkpoint
-  linking raw evidence rather than only conclusions.
+  Run at most one heavy context at a time in each genuinely shared provider pool. While a delegate
+  is in a heavy run, the controller handles lightweight coordination and checkpointing. Before
+  each expensive wave, refresh observable usage and write a durable, user-authorized checkpoint
+  linking raw evidence, not just conclusions.
 "MR10 — Role packets and safe resume": |-
-  Send role-shaped packets: exact acceptance criteria and test gates to implementers; frozen diff,
-  contracts, and independent evidence entry points to reviewers; decisions and unresolved tensions
-  to deliberation advisors. Resume a context only when retained orientation is cheaper and does
-  not compromise independence.
+  Follow [Delegate context and independence](../SKILL.md#delegate-context-and-independence) for
+  shared context requirements. Give implementers exact acceptance criteria and test gates; reviewers
+  the frozen diff, contracts, and independent evidence entry points; advisors the decisions and
+  unresolved tensions. Resume only when retained orientation is cheaper and independence is
+  preserved.
 "MR11 — Routing note": |-
-  For a substantive task, record a compact routing note: task class, controller, role→model/effort,
-  required empirical mode, expensive-wave cap, completion reserve, fallback, and named degradation.
-  For a tiny task, one sentence suffices; [C1](../SKILL.md#core-rule-c1-empirical-verification-before-claim),
-  [C2](../SKILL.md#core-rule-c2-preserve-independent-roles-delegate-when-available), and mandatory risk gates
-  still hold.
+  For substantive tasks, record task class, controller, role→model/effort, empirical mode,
+  expensive-wave cap, completion reserve, fallback, and named degradation. One sentence suffices
+  for a tiny task, but [C1](../SKILL.md#core-rule-c1-empirical-verification-before-claim),
+  [C2](../SKILL.md#core-rule-c2-preserve-independent-roles-delegate-when-available), and mandatory risk gates still apply.
 "MR12 — Conditional comparison ledger": |-
-  Only for material multi-model comparisons, record model or family, primary emphasis, findings
-  inside and outside it, validated overlap and unique findings, total completed waves, and accepted
-  outcome. Let each reviewer report any material defect; emphases are search priors, not blinders,
-  and do not solicit novelty praise.
+  For material multi-model comparisons only, record model or family, primary emphasis, findings
+  within and beyond it, validated overlap and unique findings, completed waves, and accepted
+  outcome. Reviewers may report any material defect; emphases guide search, not limit it. Do not ask
+  for novelty praise.
 
-  Revise owner mappings from representative completed tasks. Unique findings show incremental
-  coverage, not that model family caused the difference: fresh context, prompt, tools, and sampling
-  remain confounders.
+  Revise owner mappings using representative completed tasks. Unique findings show added coverage,
+  not that model family caused it; context, prompt, tools, and sampling remain confounders.
