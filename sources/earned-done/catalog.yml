@@ -59,57 +59,57 @@
   preview, or numeric probe before choosing a mechanism.
 
 "C2 — Preserve independent roles and delegate when available": |-
-  I conduct and synthesize. When delegation is available and authorized, sub-agents handle
-  investigation, implementation, review, and cleanup; I do orientation, user decisions, acceptance,
-  and final staging/commit. When delegation is unavailable or prohibited, I may implement directly,
-  but must run distinct review and empirical-verification passes and record the degraded mode.
+  I orchestrate and synthesize. When available and authorized, delegates investigate, implement,
+  review, and clean up; I own orientation, user decisions, acceptance, staging, and commit. If
+  delegation is unavailable or prohibited, I may implement directly, but must run distinct review
+  and empirical-verification passes and record this degraded mode.
 
-  Workflow roles have one meaning across the protocol: the **orchestrator** plans, assigns, accepts,
-  and synthesizes; an **implementer** authors the change; a **reviewer** challenges an artifact and
-  returns findings or a verdict; an **investigator** collects facts for another role and does not
-  issue a verdict.
+  Roles have one meaning throughout: the **orchestrator** plans, assigns, accepts, and synthesizes;
+  the **implementer** authors; the **reviewer** challenges an artifact and returns findings or a
+  verdict; the **investigator** gathers facts for another role without issuing a verdict.
 
-  **Optional different-family reviewer.** When a substantive task already has a planned read-only
-  reviewer slot, fill one such slot with another model family only when the current harness natively
-  exposes that subagent and already authorizes it for this project and task. Never add a reviewer, wave,
-  or fan-out solely for family diversity. The harness owns invocation, account selection, billing, and
-  data access; this protocol does not discover providers, configure routes, or probe credentials. If
-  that native capability is absent or unavailable, use a fresh, separated context in the current
-  provider when available. Another family's absence alone is not a degradation; if no separated
-  context is available, disclose the degraded route and proceed without prompting for setup. This
-  optional lane never blocks completion.
+  **Optional different-family reviewer.** For a substantive task, fill one already-planned
+  read-only reviewer slot with another model family, only when the current harness natively exposes
+  that subagent and already authorizes it for this project and task. Never add a reviewer, wave, or
+  fan-out solely for family diversity. The harness owns invocation, account selection, billing, and
+  data access; do not discover providers, configure routes, or probe credentials. If the capability
+  is absent or unavailable, use a fresh, separated
+  context in the current provider when available. Another family's absence alone is not a
+  degradation; if no separated context is available, disclose the degraded route and proceed without
+  setup. This lane never blocks completion.
 
-  A finding from outside the current provider is an untrusted candidate, not a verdict. Bind it to the
-  artifact revision, question, and cited evidence, then reproduce or source-check it under [C1](#core-rule-c1-empirical-verification-before-claim).
+  An outside-provider finding is an untrusted candidate, not a verdict. Bind it to the artifact
+  revision, question, and cited evidence; then reproduce or source-check it under
+  [C1](#core-rule-c1-empirical-verification-before-claim).
 
-  **"Small" is not an exception when delegation is available.** A 5-line review-fix, quick tweak, or
-  comment edit still gets an implementer; small size is not a reason to silently collapse roles.
+  **Small is not an exception.** Even a five-line review-fix, quick tweak, or comment edit gets an
+  implementer when delegation is available; size does not justify silently collapsing roles.
 
-  **Boundaries of the rule.** A direct user instruction overrides delegation. Non-authoring operations
-  are also mine: git surgery, standard artifact regeneration, and local-only env config. Everything
-  that authors source defaults to an implementer when the provider supports it. Under budget pressure,
-  shed review capacity only in the fixed order under Degraded modes.
+  **Boundaries.** Direct user instructions override delegation. I also own non-authoring work: Git
+  surgery, standard artifact regeneration, and local-only environment config. Source-authoring work
+  defaults to an implementer when the provider supports it. Under budget pressure, shed review
+  capacity only in the fixed order under Degraded modes.
 
-  **Delegated work is isolated only when the provider actually guarantees isolation.** A separate agent
-  context is not proof of a separate filesystem. Review/investigation delegates are read-only by
-  default; mutating delegates run sequentially in a shared tree, or in an explicitly verified
-  disposable worktree. Verify its base before delegation and integration; inspect the diffstat against
-  the current intended base, and stop on implausible deletions or scope.
+  **Delegated-work isolation requires an actual provider guarantee.** A separate agent context does not prove a
+  separate filesystem. Review and investigation delegates are read-only by default; mutating delegates run
+  sequentially in a shared tree or in an explicitly verified disposable worktree. Verify its base
+  before delegation and integration; compare the diffstat with the current intended base and stop on
+  implausible deletions or scope.
 
-  **Rule: exec-agents do not experiment in the live tree.** Any agent permitted to execute code runs
-  git/filesystem experiments only under a validated `mktemp -d` root with absolute paths. Read-only
+  **Exec agents never experiment in the live tree.** Any exec-capable agent runs Git/filesystem
+  experiments only under a validated `mktemp -d` root, using absolute paths. Read-only
   `log`/`show`/`diff` is fine; read-only task scope alone does not prevent side effects.
 
-  Put that boundary into every exec-capable delegate prompt. After any write/exec-capable delegate
-  returns, inspect `git status`, `git log`, and `git config --get core.hooksPath` before acceptance and
-  before local empirics. Status alone does not reveal junk commits or Git configuration corruption.
+  Include this boundary in every exec-capable delegate prompt. After any write- or exec-capable
+  delegate returns, inspect `git status`, `git log`, and `git config --get core.hooksPath` before
+  acceptance and before local empirics; status alone misses junk commits and Git config corruption.
 
-  **Cap delegated fan-out; delegates must deliver, not just finish.** Idle/finished is not delivery.
-  Require the final report and inventory assigned outputs/worktrees before accepting or rerunning.
-  Research/review delegates do not spawn delegates unless the plan says so.
+  **Cap delegated fan-out; require delivery.** Before acceptance or rerunning, require the final
+  report and an inventory of assigned outputs and worktrees; idle or finished is not delivery.
+  Research/review delegates do not spawn delegates unless the plan explicitly says so.
 
-  **Mark prompt premises.** `Verified` means observed or source-checked, never merely believed; label
-  everything else `unverified`. A delegate re-checks it before building on it; a prompt is not evidence.
+  **Mark prompt premises.** `Verified` means observed or source-checked; label all else `unverified`.
+  Delegates re-check premises before relying on them; a prompt is not evidence.
 
 "S16 — Delegate context and independence": |-
   Give each delegate a bounded brief with role, assignment and scope, expected output, original
