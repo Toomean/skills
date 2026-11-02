@@ -134,63 +134,6 @@ preliminary conclusion supplied under the [validator rule](#independent-validato
 conversation guarantees neither independent judgment nor filesystem isolation. If requested
 separation is unavailable, disclose it and use the existing degraded route; do not block on setup.
 
-## Recurring failure modes — guard against
-
-Project- and container-specific operational gotchas do NOT belong here — route them through the
-selected adapter to the project's authorized instructions or knowledge store (see Memory hygiene).
-Two groups:
-
-### Reasoning traps
-
-1. **[T1] Hidden coupling via derived state or dependencies.** Before asserting that X is independent
-   of Y, trace the entire derivation and dependency chain, including upstream state.
-2. **[T2] Claiming that a package handles behavior without reading its source.** Inspect the installed
-   implementation or authoritative documentation before relying on defaults or edge behavior.
-3. **[T3] Inferring infrastructure from a layer that cannot see it.** Persistence, mounts,
-   networking, and auth may depend on a host, CI, VM, or container boundary. Verify from the layer
-   that owns the property, or defer the claim.
-4. **[T4] Provenance claims need `git`; merged content is not ancestry.** Verify authorship with
-   `git log` or `blame`. Squash merges can make ancestry checks false while content is present, so
-   compare the target file or diff. Check interactions against the other change's real content,
-   not a reconstructed version.
-5. **[T5] Tool-use rejection has more than one cause.** A harness rejection may come from
-   infrastructure or a safety classifier, not the user. Inspect nearby errors before attributing
-   intent; hedge or ask again when the cause is ambiguous.
-6. **[T6] Absence claims need a full-surface search.** Search all call paths before reporting that
-   something is unused, dead, or never sent. One read path is not proof that it is the only path.
-7. **[T7] Bug-report steps are ground truth.** Do not invent missing steps to fit a mechanism. If
-   the mechanism does not reproduce from the literal steps, gather real data or environment facts
-   before revising the report.
-
-### Instrument traps
-
-These cover shell, Git, infrastructure, and harness failures.
-
-8. **[T8] Ambient environment does not automatically propagate.** Pass required variables and
-   secrets explicitly to agents, tests, and hooks; verify them. Use absolute paths when cwd may
-   change. Before clearing a config layer, identify the consumers that rely on it.
-9. **[T9] Prefer the environment's standard tool to a hand-built substitute.** Read the repository
-   guide before a workaround; package managers and native tools often preserve hidden contracts.
-10. **[T10] A failing pre-commit hook can hide work in a stash.** Confirm independent gates before
-    bypassing a hook, inspect exit codes, and check `git stash list` if changes disappear.
-11. **[T11] Pipes and ungated scripts can swallow the decisive exit code.** Do not end a signal-
-    carrying command in `tail`, `grep`, or `head`. Gate commit after checks succeed.
-12. **[T12] Diagnose repeated infrastructure failure before retrying.** After the second identical
-    failure, identify the owning layer. Do not change global state before that diagnosis.
-13. **[T13] Validate declarative artifacts with their native tool.** Use the relevant dry-run,
-    build, or lint for service units, containers, and CI files; visual review is not enough.
-14. **[T14] A deny-test without a live chokepoint proves nothing.** Require a positive control and
-    the adjudicator's own log; a client-side error alone does not prove the boundary judged it.
-15. **[T15] Reproduce under the runtime layers that matter.** Match production namespaces, mounts,
-    resource caps, environment, and flags. If exact topology is unavailable, audit write sites
-    against protected paths and report the limitation.
-16. **[T16] Treat the probe harness as a suspect.** Before interpreting a result, audit the
-    instrument's form: exact match/expansion, args, cwd, shell, stdin, selected target, and whether
-    the chokepoint ran. Prefer deterministic, count-based controls over timing or mtime guesses.
-    In multi-command shell probes, use task-specific variable names; do not assign shell-reserved or
-    special parameters (for example zsh `path`, which rewrites `PATH`), and select an explicit shell
-    when semantics matter.
-
 ## Per-task workflow
 
 The numbered [W1]-[W8] sequence applies to a task that authors or changes a repository artifact
@@ -278,6 +221,63 @@ separate degraded mode and must be named as such.
 3. **When [W1]'s completion reserve is threatened, stop new heavy work.** Verify what shipped,
    commit and hand off. With hidden usage, stop unattended work at
    the agreed expensive-wave cap.
+
+## Recurring failure modes — guard against
+
+Project- and container-specific operational gotchas do NOT belong here — route them through the
+selected adapter to the project's authorized instructions or knowledge store (see Memory hygiene).
+Two groups:
+
+### Reasoning traps
+
+1. **[T1] Hidden coupling via derived state or dependencies.** Before asserting that X is independent
+   of Y, trace the entire derivation and dependency chain, including upstream state.
+2. **[T2] Claiming that a package handles behavior without reading its source.** Inspect the installed
+   implementation or authoritative documentation before relying on defaults or edge behavior.
+3. **[T3] Inferring infrastructure from a layer that cannot see it.** Persistence, mounts,
+   networking, and auth may depend on a host, CI, VM, or container boundary. Verify from the layer
+   that owns the property, or defer the claim.
+4. **[T4] Provenance claims need `git`; merged content is not ancestry.** Verify authorship with
+   `git log` or `blame`. Squash merges can make ancestry checks false while content is present, so
+   compare the target file or diff. Check interactions against the other change's real content,
+   not a reconstructed version.
+5. **[T5] Tool-use rejection has more than one cause.** A harness rejection may come from
+   infrastructure or a safety classifier, not the user. Inspect nearby errors before attributing
+   intent; hedge or ask again when the cause is ambiguous.
+6. **[T6] Absence claims need a full-surface search.** Search all call paths before reporting that
+   something is unused, dead, or never sent. One read path is not proof that it is the only path.
+7. **[T7] Bug-report steps are ground truth.** Do not invent missing steps to fit a mechanism. If
+   the mechanism does not reproduce from the literal steps, gather real data or environment facts
+   before revising the report.
+
+### Instrument traps
+
+These cover shell, Git, infrastructure, and harness failures.
+
+8. **[T8] Ambient environment does not automatically propagate.** Pass required variables and
+   secrets explicitly to agents, tests, and hooks; verify them. Use absolute paths when cwd may
+   change. Before clearing a config layer, identify the consumers that rely on it.
+9. **[T9] Prefer the environment's standard tool to a hand-built substitute.** Read the repository
+   guide before a workaround; package managers and native tools often preserve hidden contracts.
+10. **[T10] A failing pre-commit hook can hide work in a stash.** Confirm independent gates before
+    bypassing a hook, inspect exit codes, and check `git stash list` if changes disappear.
+11. **[T11] Pipes and ungated scripts can swallow the decisive exit code.** Do not end a signal-
+    carrying command in `tail`, `grep`, or `head`. Gate commit after checks succeed.
+12. **[T12] Diagnose repeated infrastructure failure before retrying.** After the second identical
+    failure, identify the owning layer. Do not change global state before that diagnosis.
+13. **[T13] Validate declarative artifacts with their native tool.** Use the relevant dry-run,
+    build, or lint for service units, containers, and CI files; visual review is not enough.
+14. **[T14] A deny-test without a live chokepoint proves nothing.** Require a positive control and
+    the adjudicator's own log; a client-side error alone does not prove the boundary judged it.
+15. **[T15] Reproduce under the runtime layers that matter.** Match production namespaces, mounts,
+    resource caps, environment, and flags. If exact topology is unavailable, audit write sites
+    against protected paths and report the limitation.
+16. **[T16] Treat the probe harness as a suspect.** Before interpreting a result, audit the
+    instrument's form: exact match/expansion, args, cwd, shell, stdin, selected target, and whether
+    the chokepoint ran. Prefer deterministic, count-based controls over timing or mtime guesses.
+    In multi-command shell probes, use task-specific variable names; do not assign shell-reserved or
+    special parameters (for example zsh `path`, which rewrites `PATH`), and select an explicit shell
+    when semantics matter.
 
 ## Code review — see [CodeReview](CodeReview.md)
 
