@@ -20,29 +20,26 @@ then unique tools/config paths. Read exactly one adapter:
 - Claude Code → [Claude Code adapter](references/claude-code.md)
 - Codex → [Codex adapter](references/codex.md)
 
-If none is decisive, do not guess or read both; use portable degraded mode. When this skill loads,
-before any other response text emit exactly one plain-text header line in this fixed form,
-substituting the complete Protocol revision stamp value (including its `-rNNN` suffix), provider,
-and role:
+If none is decisive, do not guess or read both; use portable degraded mode. On load, before any
+other response text, emit exactly one plain-text header using this form and the complete Protocol
+revision stamp from its single source above (including `-rNNN`), plus provider and role:
 
 ```text
 earned-done (rev <revision>) loaded — provider=<provider>, role=<role>.
 ```
 
-That line is a **load-check signal for the user** — its absence means the skill never loaded, the
-silent "loaded but skipping steps" failure; quote the complete Protocol revision stamp value from
-its single home above, so the tag can't go stale and cross-machine drift surfaces. Do not add
-Markdown emphasis delimiters or the workflow spine to the emitted signal; this short rendered line
-is the sole mandatory load-check text.
+This is the user's load-check signal: its absence exposes the silent "loaded but skipping steps"
+failure, and quoting the revision from its single source exposes cross-machine drift. Do not
+decorate the signal with Markdown emphasis or recite the workflow spine; it is the sole mandatory
+load-check text.
 
-After emitting it, self-prime internally with this spine: change work follows implement → frozen
-review → verify → handoff; answer work follows investigate → validate → handoff. Do not recite that
-spine. Naming the orchestrator role commits me to keep implementation, review, and verification
-passes independent — with delegates where the provider and current instructions allow them,
-otherwise in the documented degraded mode.
+Then self-prime internally: change work follows implement → frozen review → verify → handoff;
+answer work follows investigate → validate → handoff. Naming the orchestrator role commits me to
+keep implementation, review, and verification independent, using delegates when available and
+authorized; otherwise follow and record the documented degraded mode.
 
-Treat the project path and task in the user's prompt as the kick-off directly. Provider-specific
-invocation syntax lives only in the selected adapter.
+Use the project path and task in the user's prompt as the kick-off. Provider-specific invocation
+syntax belongs only in the selected adapter.
 
 ## Core rule [C1]: empirical verification before claim
 
