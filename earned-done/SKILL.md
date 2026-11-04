@@ -159,31 +159,31 @@ artifact; once it does, the full change-producing sequence applies.
    - **First launch of a long-running system:** inspect runtime paths for latent timers, budgets,
      expiry, or accumulator stop conditions that short tests cannot expose.
 2. **[W2] Implementer role** does the change. Use a delegate when available; otherwise declare degraded mode and keep implementation separate from the later review pass.
-3. **[W3] Two reviewer contexts by default** review the frozen post-[W2] artifact, in parallel only
-   when the provider and filesystem topology make that safe. Reviewers are read-only by default. Every reviewer
-   shares a minimal correctness/evidence baseline and may report any material defect; a named lens
-   is its search emphasis, never a boundary on what it may notice.
-   - **Reviewer #1: technical correctness** — bug surface, runtime behavior, edge cases. Be paranoid, find errors. Cite file:line.
-   - **Reviewer #2: review intent + cleanup** — does this close the original review concern? Any
-     unrelated scope creep? [Comment quality](ReviewTaste.md#comment-quality)?
-   - **Finite role accounting:** put each required risk lens into one of those two contexts when its
-     independence and expertise are compatible with that context. Add a context only when required
-     independence or expertise cannot be composed into the two defaults, and name that reason in the
-     plan; a new label alone never creates another reviewer or wave. The independent validator is a
-     skeptical pass, not automatically a third context; it may use a default slot only when it stays
-     independent from the author of the conclusion it validates.
-   - **Measurement or metric:** one slot attacks the measurement method and searches for a materially
-     better configuration. Ordinary correctness review is not enough.
+3. **[W3] Two reviewer contexts by default** review the frozen post-[W2] artifact. Run them in parallel
+   only when the provider and filesystem make it safe. Reviewers are read-only by default and share a
+   minimal correctness/evidence baseline; they may report any material defect. A named lens focuses
+   the search, never limits findings.
+   - **Reviewer #1: technical correctness** — inspect bugs, runtime behavior, and edge cases; be
+     paranoid, hunt for errors, and cite file:line.
+   - **Reviewer #2: review intent + cleanup** — does this address the original concern without
+     unrelated scope creep? Check [Comment quality](ReviewTaste.md#comment-quality).
+   - **Finite role accounting:** fit each required risk lens into those two contexts when independence
+     and expertise are compatible. Add a context only when required independence or expertise cannot
+     fit the two defaults, and name that reason in the plan; a label alone adds no reviewer or wave.
+     The independent validator is a skeptical pass, not automatically a third context; it may use a
+     default slot only when independent from the author of the conclusion it validates.
+   - **Measurement or metric:** one slot must attack the method and seek a materially better
+     configuration; ordinary correctness review is not enough.
    - **Privilege, security, or trust boundary:** one compatible slot becomes the dedicated adversarial
      reviewer and reproduces the attack in a throwaway environment. Static review cannot close an
      exploitability claim. Put the security question into plan review too.
-   - **Unusually large implementer run:** inspect diffstat, scope, test changes, and coverage deltas
-     first. Give reviewers a diff against the pre-change baseline so weakened assertions are visible.
-   - **Content to be published:** one reviewer checks audience, identifiability, provenance, and
-     legal or reputational consequences. Factual accuracy does not cover publication consequences.
-   - **Proportionality downward:** one reviewer with a named adversarial lens may replace two for a
-     tiny non-runtime diff, or where the orchestrator already executed end-to-end empirics. This does
-     not relax the implementer role; record the deviation and its compensating evidence.
+   - **Unusually large implementer run:** first inspect diffstat, scope, test changes, and coverage
+     deltas. Give reviewers a pre-change baseline diff to expose weakened assertions.
+   - **Content to be published:** one reviewer checks audience, identifiability, provenance, and legal
+     or reputational consequences; factual accuracy alone is not enough.
+   - **Proportionality downward:** one reviewer with a named adversarial lens may replace two only for
+     a tiny non-runtime diff or when the orchestrator already ran end-to-end empirics. This does not
+     relax the implementer role; record the deviation and compensating evidence.
 4. **[W4] Synthesize reviews without moving the artifact under review.** If a finding requires any
    source-authoring repair, route it back through [W2], freeze the updated artifact, and repeat a
    proportional [W3] review before [W5]. If findings conflict, decide and explain; never carry a
